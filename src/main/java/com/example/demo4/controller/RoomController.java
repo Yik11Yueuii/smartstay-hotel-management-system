@@ -3,6 +3,7 @@ package com.example.demo4.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.demo4.common.Result;
+import com.example.demo4.config.AdminOnly;
 import com.example.demo4.entity.Room;
 import com.example.demo4.service.RoomService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -79,6 +80,7 @@ public class RoomController {
      * 添加客房
      */
     @PostMapping("/add")
+    @AdminOnly
     public Result<String> add(@RequestBody Room room) {
         try {
             System.out.println("接收到客房数据: " + room);
@@ -110,6 +112,7 @@ public class RoomController {
      * 更新客房
      */
     @PutMapping("/update")
+    @AdminOnly
     public Result<String> update(@RequestBody Room room) {
         roomService.updateById(room);
         return Result.success("更新成功");
@@ -119,6 +122,7 @@ public class RoomController {
      * 删除客房
      */
     @DeleteMapping("/{id}")
+    @AdminOnly
     public Result<String> delete(@PathVariable Long id) {
         roomService.removeById(id);
         return Result.success("删除成功");

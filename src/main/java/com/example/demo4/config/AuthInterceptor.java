@@ -30,6 +30,13 @@ public class AuthInterceptor implements HandlerInterceptor {
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
             throws Exception {
+        boolean adminOnly = handler instanceof HandlerMethod
+                && ((HandlerMethod) handler).hasMethodAnnotation(AdminOnly.class);
+        boolean userApi = request.getRequestURI().startsWith("/api/user/");
+        if (!userApi && !adminOnly) {
+            return true;
+        }
+
         String authorization = request.getHeader("Authorization");
         if (authorization == null || !authorization.startsWith("Bearer ")) {
             writeUnauthorized(response, "请先登录");
@@ -41,9 +48,7 @@ public class AuthInterceptor implements HandlerInterceptor {
             request.setAttribute(AUTH_USER_ID, principal.getUserId());
             request.setAttribute(AUTH_USER_ROLE, principal.getRole());
 
-            if (handler instanceof HandlerMethod
-                    && ((HandlerMethod) handler).hasMethodAnnotation(AdminOnly.class)
-                    && principal.getRole() != 1) {
+            if (adminOnly && principal.getRole() != 1) {
                 writeForbidden(response, "需要管理员权限");
                 return false;
             }

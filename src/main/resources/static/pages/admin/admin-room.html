@@ -154,6 +154,12 @@
 </div>
 
 <script>
+    function authHeaders(json) {
+        const headers = { 'Authorization': 'Bearer ' + (localStorage.getItem('token') || '') };
+        if (json) headers['Content-Type'] = 'application/json';
+        return headers;
+    }
+
     console.log('admin-room.js 开始执行');
 
     // 检查管理员登录
@@ -288,7 +294,8 @@
         if (!confirm('确定要删除这个客房吗?')) return;
 
         fetch('http://localhost:8080/api/room/' + id, {
-            method: 'DELETE'
+            method: 'DELETE',
+            headers: authHeaders(false)
         })
             .then(response => response.json())
             .then(data => {
@@ -351,9 +358,7 @@
 
         fetch(url, {
             method: method,
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: authHeaders(true),
             body: JSON.stringify(roomData)
         })
             .then(response => response.json())
