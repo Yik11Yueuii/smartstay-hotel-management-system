@@ -11,7 +11,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.Map;
 
 @RestController
@@ -129,20 +128,8 @@ public class BookingController {
             Long bookingId = Long.valueOf(params.get("bookingId").toString());
             String guestName = params.get("guestName").toString();
             String guestIdCard = params.get("guestIdCard").toString();
-            Double deposit = Double.valueOf(params.get("deposit").toString());
-
-            Booking booking = bookingService.getById(bookingId);
-            if (booking == null) {
-                return Result.error("订单不存在");
-            }
-
-            booking.setGuestName(guestName);
-            booking.setGuestIdCard(guestIdCard);
-            booking.setDeposit(BigDecimal.valueOf(deposit));
-            booking.setActualCheckInTime(LocalDateTime.now());
-            booking.setStatus(3);
-
-            bookingService.updateById(booking);
+            BigDecimal deposit = new BigDecimal(params.get("deposit").toString());
+            bookingService.checkIn(bookingId, guestName, guestIdCard, deposit);
             return Result.success("入住成功");
         } catch (Exception e) {
             return Result.error(e.getMessage());
@@ -157,22 +144,11 @@ public class BookingController {
     public Result<String> checkOut(@RequestBody Map<String, Object> params) {
         try {
             Long bookingId = Long.valueOf(params.get("bookingId").toString());
-            Double depositReturn = Double.valueOf(params.get("depositReturn").toString());
-            Double additionalCharges = Double.valueOf(params.get("additionalCharges").toString());
+            BigDecimal depositReturn = new BigDecimal(params.get("depositReturn").toString());
+            BigDecimal additionalCharges = new BigDecimal(params.get("additionalCharges").toString());
             String remark = params.get("remark") != null ? params.get("remark").toString() : "";
 
-            Booking booking = bookingService.getById(bookingId);
-            if (booking == null) {
-                return Result.error("订单不存在");
-            }
-
-            booking.setDepositReturn(BigDecimal.valueOf(depositReturn));
-            booking.setAdditionalCharges(BigDecimal.valueOf(additionalCharges));
-            booking.setRemark(remark);
-            booking.setActualCheckOutTime(LocalDateTime.now());
-            booking.setStatus(4);
-
-            bookingService.updateById(booking);
+            bookingService.checkOut(bookingId, depositReturn, additionalCharges, remark);
             return Result.success("退房成功");
         } catch (Exception e) {
             return Result.error(e.getMessage());

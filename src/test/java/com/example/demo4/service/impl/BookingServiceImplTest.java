@@ -54,6 +54,56 @@ class BookingServiceImplTest {
         assertEquals("所选日期内客房已被预订", exception.getMessage());
     }
 
+    @Test
+    void checkInMovesConfirmedBookingAndRoomToCheckedIn() {
+        RoomService roomService = mock(RoomService.class);
+        Room room = availableRoom();
+        room.setStatus(2);
+        when(roomService.getById(8L)).thenReturn(room);
+        Booking booking = validBooking();
+        booking.setId(10L);
+        booking.setStatus(1);
+        booking.setCheckInDate(LocalDate.now());
+        booking.setCheckOutDate(LocalDate.now().plusDays(1));
+        BookingServiceImpl service = spy(new BookingServiceImpl(roomService));
+        doReturn(booking).when(service).getById(10L);
+        doReturn(true).when(service).updateById(any(Booking.class));
+
+        service.checkIn(10L, "张三", "110101199001011234", new BigDecimal("300.00"));
+
+        assertEquals(3, booking.getStatus());
+        assertEquals(3, room.getStatus());
+        assertEquals(new BigDecimal("300.00"), booking.getDeposit());
+    }
+
+    @Test
+    void checkOutRejectsDepositReturnAboveCollectedDeposit() {
+        RoomService roomService = mock(RoomService.class);
+        Booking booking = validBooking();
+        booking.setStatus(3);
+        booking.setDeposit(new BigDecimal("200.00"));
+        BookingServiceImpl service = spy(new BookingServiceImpl(roomService));
+        doReturn(booking).when(service).getById(10L);
+
+        RuntimeException exception = assertThrows(RuntimeException.class,
+                () -> service.checkOut(10L, new BigDecimal("201.00"), BigDecimal.ZERO, ""));
+
+        assertEquals("退还押金不能超过已收押金", exception.getMessage());
+    }
+
+    @Test
+    void confirmRejectsBookingThatIsNotPending() {
+        Booking booking = validBooking();
+        booking.setStatus(2);
+        BookingServiceImpl service = spy(new BookingServiceImpl(mock(RoomService.class)));
+        doReturn(booking).when(service).getById(10L);
+
+        RuntimeException exception = assertThrows(RuntimeException.class,
+                () -> service.confirmBooking(10L));
+
+        assertEquals("只有待确认订单可以确认", exception.getMessage());
+    }
+
     private Booking validBooking() {
         Booking booking = new Booking();
         booking.setRoomId(8L);
