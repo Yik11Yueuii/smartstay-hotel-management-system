@@ -63,7 +63,10 @@ public class FeedbackController {
             @RequestAttribute(AuthInterceptor.AUTH_USER_ROLE) Integer authenticatedRole,
             @PathVariable Long id) {
         Feedback feedback = feedbackService.getById(id);
-        if (feedback != null && authenticatedRole != 1
+        if (feedback == null) {
+            return Result.error(404, "反馈不存在");
+        }
+        if (authenticatedRole != 1
                 && !authenticatedUserId.equals(feedback.getUserId())) {
             return Result.error("不能查看其他用户的反馈");
         }

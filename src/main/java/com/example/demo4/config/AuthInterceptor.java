@@ -42,7 +42,7 @@ public class AuthInterceptor implements HandlerInterceptor {
 
         String authorization = request.getHeader("Authorization");
         if (authorization == null || !authorization.startsWith("Bearer ")) {
-            writeUnauthorized(response, "请先登录");
+            writeError(response, 401, "请先登录");
             return false;
         }
 
@@ -52,27 +52,20 @@ public class AuthInterceptor implements HandlerInterceptor {
             request.setAttribute(AUTH_USER_ROLE, principal.getRole());
 
             if (adminOnly && principal.getRole() != 1) {
-                writeForbidden(response, "需要管理员权限");
+                writeError(response, 403, "需要管理员权限");
                 return false;
             }
             return true;
         } catch (IllegalArgumentException exception) {
-            writeUnauthorized(response, exception.getMessage());
+            writeError(response, 401, exception.getMessage());
             return false;
         }
     }
 
-    private void writeForbidden(HttpServletResponse response, String message) throws Exception {
-        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+    private void writeError(HttpServletResponse response, int code, String message) throws Exception {
+        response.setStatus(code);
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        response.getWriter().write(objectMapper.writeValueAsString(Result.error(message)));
-    }
-
-    private void writeUnauthorized(HttpServletResponse response, String message) throws Exception {
-        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-        response.setCharacterEncoding(StandardCharsets.UTF_8.name());
-        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        response.getWriter().write(objectMapper.writeValueAsString(Result.error(message)));
+        response.getWriter().write(objectMapper.writeValueAsString(Result.error(code, message)));
     }
 }

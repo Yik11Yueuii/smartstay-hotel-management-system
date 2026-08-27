@@ -73,6 +73,9 @@ public class RoomController {
     @GetMapping("/{id}")
     public Result<Room> getById(@PathVariable Long id) {
         Room room = roomService.getById(id);
+        if (room == null) {
+            return Result.error(404, "客房不存在");
+        }
         return Result.success(room);
     }
 

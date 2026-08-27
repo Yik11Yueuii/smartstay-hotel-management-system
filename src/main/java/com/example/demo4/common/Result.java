@@ -24,8 +24,12 @@ public class Result<T> {
     }
 
     public static <T> Result<T> error(String message) {
+        return error(400, message);
+    }
+
+    public static <T> Result<T> error(Integer code, String message) {
         Result<T> r = new Result<>();
-        r.setCode(500);
+        r.setCode(code);
         r.setMessage(message);
         return r;
     }

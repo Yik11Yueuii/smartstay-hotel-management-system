@@ -63,6 +63,9 @@ public class NoticeController {
     @GetMapping("/{id}")
     public Result<Notice> getById(@PathVariable Long id) {
         Notice notice = noticeService.getById(id);
+        if (notice == null) {
+            return Result.error(404, "公告不存在");
+        }
         return Result.success(notice);
     }
 

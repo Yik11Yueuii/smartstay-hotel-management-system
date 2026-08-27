@@ -66,7 +66,10 @@ public class BookingController {
             @RequestAttribute(AuthInterceptor.AUTH_USER_ROLE) Integer authenticatedRole,
             @PathVariable Long id) {
         Booking booking = bookingService.getById(id);
-        if (booking != null && authenticatedRole != 1
+        if (booking == null) {
+            return Result.error(404, "订单不存在");
+        }
+        if (authenticatedRole != 1
                 && !authenticatedUserId.equals(booking.getUserId())) {
             return Result.error("不能查看其他用户的订单");
         }

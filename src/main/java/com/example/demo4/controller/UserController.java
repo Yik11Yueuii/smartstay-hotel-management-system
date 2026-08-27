@@ -54,9 +54,10 @@ public class UserController {
     @GetMapping("/me")
     public Result<User> getCurrentUser(@RequestAttribute(AuthInterceptor.AUTH_USER_ID) Long userId) {
         User user = userService.getById(userId);
-        if (user != null) {
-            user.setPassword(null);
+        if (user == null) {
+            return Result.error(404, "用户不存在");
         }
+        user.setPassword(null);
         return Result.success(user);
     }
 
@@ -91,9 +92,10 @@ public class UserController {
     @AdminOnly
     public Result<User> getById(@PathVariable Long id) {
         User user = userService.getById(id);
-        if (user != null) {
-            user.setPassword(null);
+        if (user == null) {
+            return Result.error(404, "用户不存在");
         }
+        user.setPassword(null);
         return Result.success(user);
     }
 
