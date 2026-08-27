@@ -30,7 +30,7 @@ loginForm.addEventListener('submit', function(e) {
     if (!isValid) return;
 
     // 调用后端API登录
-    fetch('http://localhost:8080/api/user/login', {
+    fetch('/api/user/login', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'

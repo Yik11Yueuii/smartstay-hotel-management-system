@@ -22,7 +22,7 @@ function loadBookings() {
     const searchInput = document.getElementById('searchInput').value;
     const statusFilter = document.getElementById('statusFilter').value;
 
-    let url = 'http://localhost:8080/api/booking/list?page=1&size=100';
+    let url = '/api/booking/list?page=1&size=100';
     if (searchInput) url += `&orderNo=${searchInput}`;
     if (statusFilter) url += `&status=${statusFilter}`;
 
@@ -70,7 +70,7 @@ function renderBookings(bookings) {
 // 确认订单
 function confirmBooking(id) {
     if (confirm('确定要确认此订单吗?')) {
-        fetch(`http://localhost:8080/api/booking/confirm/${id}`, { method: 'PUT' })
+        fetch(`/api/booking/confirm/${id}`, { method: 'PUT' })
             .then(response => response.json())
             .then(data => {
                 if (data.code === 200) {
@@ -98,7 +98,7 @@ function checkIn(id) {
     const deposit = prompt('请输入押金金额:', '200');
     if (!deposit) return;
 
-    fetch('http://localhost:8080/api/booking/checkin', {
+    fetch('/api/booking/checkin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ bookingId: id, guestName, guestIdCard, deposit })
@@ -126,7 +126,7 @@ function checkOut(id) {
     const additionalCharges = prompt('请输入额外费用:', '0');
     if (additionalCharges === null) return;
 
-    fetch('http://localhost:8080/api/booking/checkout', {
+    fetch('/api/booking/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ bookingId: id, depositReturn, additionalCharges, remark: '' })

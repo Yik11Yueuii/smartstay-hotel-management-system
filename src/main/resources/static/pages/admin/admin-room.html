@@ -189,7 +189,7 @@
         const searchInput = document.getElementById('searchInput').value;
         const typeFilter = document.getElementById('typeFilter').value;
 
-        let url = 'http://localhost:8080/api/room/list?page=1&size=100';
+        let url = '/api/room/list?page=1&size=100';
         if (searchInput) url += '&roomName=' + searchInput;
         if (typeFilter) url += '&roomType=' + typeFilter;
 
@@ -258,7 +258,7 @@
 
     // 编辑客房
     function editRoom(id) {
-        fetch('http://localhost:8080/api/room/' + id)
+        fetch('/api/room/' + id)
             .then(response => response.json())
             .then(data => {
                 if (data.code === 200) {
@@ -293,7 +293,7 @@
     function deleteRoom(id) {
         if (!confirm('确定要删除这个客房吗?')) return;
 
-        fetch('http://localhost:8080/api/room/' + id, {
+        fetch('/api/room/' + id, {
             method: 'DELETE',
             headers: authHeaders(false)
         })
@@ -347,8 +347,8 @@
         console.log('提交客房数据:', roomData);
 
         const url = roomId ?
-            'http://localhost:8080/api/room/update' :
-            'http://localhost:8080/api/room/add';
+            '/api/room/update' :
+            '/api/room/add';
 
         const method = 'POST';
 

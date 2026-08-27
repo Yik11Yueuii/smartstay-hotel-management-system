@@ -3,7 +3,7 @@ function loadRooms() {
     const searchInput = document.getElementById('searchInput').value;
     const typeFilter = document.getElementById('typeFilter').value;
 
-    let url = 'http://localhost:8080/api/room/list?page=1&size=100';
+    let url = '/api/room/list?page=1&size=100&status=1';
     if (searchInput) url += `&roomName=${searchInput}`;
     if (typeFilter) url += `&roomType=${typeFilter}`;
 

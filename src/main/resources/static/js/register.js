@@ -65,7 +65,7 @@ registerForm.addEventListener('submit', function(e) {
     if (!isValid) return;
 
     // 调用后端API注册
-    fetch('http://localhost:8080/api/user/register', {
+    fetch('/api/user/register', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'

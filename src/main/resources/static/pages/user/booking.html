@@ -13,9 +13,9 @@
     <div class="nav-container">
         <div class="nav-brand">🏨 酒店管理系统</div>
         <div class="nav-menu">
-            <a href=" ">首页</a >
-            <a href="/pages/user/room-list.html">客房列表</a >
-            <a href="/pages/user/user-center.html">个人中心</a >
+            <a href="/pages/user/index.html">首页</a>
+            <a href="/pages/user/room-list.html">客房列表</a>
+            <a href="/pages/user/user-center.html">个人中心</a>
         </div>
         <div class="nav-user">
             <span id="userName">张三</span>
@@ -106,7 +106,7 @@
             return;
         }
 
-        fetch('http://localhost:8080/api/room/' + roomId)
+        fetch('/api/room/' + roomId)
             .then(response => response.json())
             .then(data => {
                 if (data.code === 200) {
@@ -199,7 +199,7 @@
 
         console.log('提交预订数据:', bookingData);
 
-        fetch('http://localhost:8080/api/booking/create', {
+        fetch('/api/booking/create', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

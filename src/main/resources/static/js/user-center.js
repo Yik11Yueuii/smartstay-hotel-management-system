@@ -88,7 +88,7 @@ function loadBookings() {
         return;
     }
 
-    fetch(`http://localhost:8080/api/booking/list?userId=${user.id}`, {
+    fetch(`/api/booking/list?userId=${user.id}`, {
         headers: authenticatedHeaders(false)
     })
         .then(response => response.json())

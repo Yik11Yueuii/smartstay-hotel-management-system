@@ -10,7 +10,7 @@ function getQueryParam(param) {
 function loadRoomInfo() {
     const roomId = getQueryParam('roomId');
 
-    fetch(`http://localhost:8080/api/room/${roomId}`)
+    fetch(`/api/room/${roomId}`)
         .then(response => response.json())
         .then(data => {
             if (data.code === 200) {
@@ -98,7 +98,7 @@ document.getElementById('bookingForm')?.addEventListener('submit', function(e) {
     };
 
     // 调用后端API创建订单
-    fetch('http://localhost:8080/api/booking/create', {
+    fetch('/api/booking/create', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'

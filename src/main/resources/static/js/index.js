@@ -1,6 +1,6 @@
 // 加载通知公告
 function loadNotices() {
-    fetch('http://localhost:8080/api/notice/show?page=1&size=4')
+    fetch('/api/notice/show?page=1&size=4')
         .then(response => response.json())
         .then(data => {
             if (data.code === 200) {
@@ -26,7 +26,7 @@ function renderNotices(notices) {
 
 // 加载推荐客房
 function loadRooms() {
-    fetch('http://localhost:8080/api/room/list?page=1&size=6&status=1')
+    fetch('/api/room/list?page=1&size=6&status=1')
         .then(response => response.json())
         .then(data => {
             if (data.code === 200) {
