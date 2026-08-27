@@ -100,28 +100,33 @@
     document.getElementById('logoutBtn')?.addEventListener('click', function() {
         if (confirm('确定要退出吗?')) {
             localStorage.removeItem('admin');
+            localStorage.removeItem('token');
             location.href = '/pages/admin/admin-login.html';
         }
     });
 
     // 加载统计数据
     function loadStats() {
-        // TODO: 替换为真实API
-        document.getElementById('totalBookings').textContent = '24';
-        document.getElementById('availableRooms').textContent = '8';
-        document.getElementById('totalUsers').textContent = '156';
-        document.getElementById('todayRevenue').textContent = '8,960';
+        fetch('/api/dashboard/summary', {
+            headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('token') || '') }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.code !== 200) throw new Error(data.message || '加载失败');
+                document.getElementById('totalBookings').textContent = data.data.totalBookings;
+                document.getElementById('availableRooms').textContent = data.data.availableRooms;
+                document.getElementById('totalUsers').textContent = data.data.totalUsers;
+                document.getElementById('todayRevenue').textContent = Number(data.data.todayRevenue).toLocaleString();
+                renderRecentBookings(data.data.recentBookings);
+            })
+            .catch(error => {
+                document.getElementById('recentBookings').innerHTML =
+                    `<tr><td colspan="6" style="text-align:center;">${error.message}</td></tr>`;
+            });
     }
 
     // 加载最近预订
-    function loadRecentBookings() {
-        // TODO: 替换为真实API
-        const bookings = [
-            { orderNo: 'ORD202401250001', roomName: '豪华单人间A', userName: '张三', checkInDate: '2024-01-28', status: 0, totalAmount: 576 },
-            { orderNo: 'ORD202401250002', roomName: '标准双人间B', userName: '李四', checkInDate: '2024-02-01', status: 1, totalAmount: 656 },
-            { orderNo: 'ORD202401250003', roomName: '商务套房', userName: '王五', checkInDate: '2024-02-05', status: 0, totalAmount: 1576 }
-        ];
-
+    function renderRecentBookings(bookings) {
         const statusMap = { 0: '待确认', 1: '已确认', 2: '已取消', 3: '已入住', 4: '已退房' };
         const statusClass = { 0: 'warning', 1: 'success', 2: 'danger', 3: 'info', 4: 'info' };
 
@@ -136,13 +141,13 @@
                 </tr>
             `).join('');
 
-        document.getElementById('recentBookings').innerHTML = html;
+        document.getElementById('recentBookings').innerHTML = html ||
+            '<tr><td colspan="6" style="text-align:center;">暂无订单</td></tr>';
     }
 
     // 页面加载
     checkAdminLogin();
     loadStats();
-    loadRecentBookings();
 </script>
 </body>
 </html>
