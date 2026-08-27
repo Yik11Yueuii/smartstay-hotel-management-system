@@ -3,6 +3,8 @@ package com.example.demo4.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.demo4.common.Result;
+import com.example.demo4.config.AdminOnly;
+import com.example.demo4.config.AuthInterceptor;
 import com.example.demo4.entity.Booking;
 import com.example.demo4.service.BookingService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +27,8 @@ public class BookingController {
      */
     @GetMapping("/list")
     public Result<Page<Booking>> list(
+            @RequestAttribute(AuthInterceptor.AUTH_USER_ID) Long authenticatedUserId,
+            @RequestAttribute(AuthInterceptor.AUTH_USER_ROLE) Integer authenticatedRole,
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "10") Integer size,
             @RequestParam(required = false) String orderNo,
@@ -42,7 +46,9 @@ public class BookingController {
             wrapper.eq(Booking::getStatus, status);
         }
 
-        if (userId != null) {
+        if (authenticatedRole != 1) {
+            wrapper.eq(Booking::getUserId, authenticatedUserId);
+        } else if (userId != null) {
             wrapper.eq(Booking::getUserId, userId);
         }
 
@@ -56,8 +62,15 @@ public class BookingController {
      * 获取订单详情
      */
     @GetMapping("/{id}")
-    public Result<Booking> getById(@PathVariable Long id) {
+    public Result<Booking> getById(
+            @RequestAttribute(AuthInterceptor.AUTH_USER_ID) Long authenticatedUserId,
+            @RequestAttribute(AuthInterceptor.AUTH_USER_ROLE) Integer authenticatedRole,
+            @PathVariable Long id) {
         Booking booking = bookingService.getById(id);
+        if (booking != null && authenticatedRole != 1
+                && !authenticatedUserId.equals(booking.getUserId())) {
+            return Result.error("不能查看其他用户的订单");
+        }
         return Result.success(booking);
     }
 
@@ -65,9 +78,11 @@ public class BookingController {
      * 创建订单
      */
     @PostMapping("/create")
-    public Result<String> create(@RequestBody Booking booking) {
+    public Result<String> create(
+            @RequestAttribute(AuthInterceptor.AUTH_USER_ID) Long authenticatedUserId,
+            @RequestBody Booking booking) {
         try {
-            bookingService.createBooking(booking);
+            bookingService.createBooking(booking, authenticatedUserId);
             return Result.success("预订成功");
         } catch (Exception e) {
             return Result.error(e.getMessage());
@@ -78,6 +93,7 @@ public class BookingController {
      * 确认订单
      */
     @PutMapping("/confirm/{id}")
+    @AdminOnly
     public Result<String> confirm(@PathVariable Long id) {
         try {
             bookingService.confirmBooking(id);
@@ -91,9 +107,12 @@ public class BookingController {
      * 取消订单
      */
     @PutMapping("/cancel/{id}")
-    public Result<String> cancel(@PathVariable Long id) {
+    public Result<String> cancel(
+            @RequestAttribute(AuthInterceptor.AUTH_USER_ID) Long authenticatedUserId,
+            @RequestAttribute(AuthInterceptor.AUTH_USER_ROLE) Integer authenticatedRole,
+            @PathVariable Long id) {
         try {
-            bookingService.cancelBooking(id);
+            bookingService.cancelBooking(id, authenticatedUserId, authenticatedRole);
             return Result.success("取消成功");
         } catch (Exception e) {
             return Result.error(e.getMessage());
@@ -104,6 +123,7 @@ public class BookingController {
      * 办理入住
      */
     @PostMapping("/checkin")
+    @AdminOnly
     public Result<String> checkIn(@RequestBody Map<String, Object> params) {
         try {
             Long bookingId = Long.valueOf(params.get("bookingId").toString());
@@ -133,6 +153,7 @@ public class BookingController {
      * 办理退房
      */
     @PostMapping("/checkout")
+    @AdminOnly
     public Result<String> checkOut(@RequestBody Map<String, Object> params) {
         try {
             Long bookingId = Long.valueOf(params.get("bookingId").toString());

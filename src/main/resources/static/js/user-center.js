@@ -71,7 +71,9 @@ function loadBookings() {
         return;
     }
 
-    fetch(`http://localhost:8080/api/booking/list?userId=${user.id}`)
+    fetch(`http://localhost:8080/api/booking/list?userId=${user.id}`, {
+        headers: authenticatedHeaders(false)
+    })
         .then(response => response.json())
         .then(data => {
             if (data.code === 200) {
@@ -117,9 +119,17 @@ function renderUserBookings(bookings) {
 // 取消预订
 function cancelBooking(id) {
     if (confirm('确定要取消此预订吗?')) {
-        // TODO: 替换为真实API
-        alert('取消成功! (模拟)');
-        loadBookings();
+        fetch(`/api/booking/cancel/${id}`, {
+            method: 'PUT',
+            headers: authenticatedHeaders(false)
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.code !== 200) throw new Error(data.message || '取消失败');
+                alert('取消成功!');
+                loadBookings();
+            })
+            .catch(error => alert(error.message));
     }
 }
 

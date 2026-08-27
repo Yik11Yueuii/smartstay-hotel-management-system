@@ -70,6 +70,12 @@
 </div>
 
 <script>
+    function authHeaders(json) {
+        const headers = { 'Authorization': 'Bearer ' + (localStorage.getItem('token') || '') };
+        if (json) headers['Content-Type'] = 'application/json';
+        return headers;
+    }
+
     console.log('admin-booking.js 开始执行');
 
     // 检查管理员登录
@@ -105,7 +111,7 @@
 
         console.log('请求URL:', url);
 
-        fetch(url)
+        fetch(url, { headers: authHeaders(false) })
             .then(response => {
                 console.log('响应状态:', response.status);
                 if (!response.ok) {
@@ -188,7 +194,8 @@
         if (!confirm('确定要确认此订单吗?')) return;
 
         fetch('http://localhost:8080/api/booking/confirm/' + id, {
-            method: 'PUT'
+            method: 'PUT',
+            headers: authHeaders(false)
         })
             .then(response => response.json())
             .then(data => {
@@ -218,7 +225,7 @@
 
         fetch('http://localhost:8080/api/booking/checkin', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: authHeaders(true),
             body: JSON.stringify({
                 bookingId: id,
                 guestName: guestName,
@@ -251,7 +258,7 @@
 
         fetch('http://localhost:8080/api/booking/checkout', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: authHeaders(true),
             body: JSON.stringify({
                 bookingId: id,
                 depositReturn: parseFloat(depositReturn),
