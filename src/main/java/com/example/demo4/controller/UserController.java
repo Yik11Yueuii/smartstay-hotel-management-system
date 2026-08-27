@@ -6,6 +6,7 @@ import com.example.demo4.common.Result;
 import com.example.demo4.entity.User;
 import com.example.demo4.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -17,6 +18,9 @@ public class UserController {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     /**
      * 用户登录
@@ -83,11 +87,11 @@ public class UserController {
                 return Result.error("用户不存在");
             }
 
-            if (!oldPassword.equals(user.getPassword())) {
+            if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
                 return Result.error("原密码错误");
             }
 
-            user.setPassword(newPassword);
+            user.setPassword(passwordEncoder.encode(newPassword));
             userService.updateById(user);
             return Result.success("密码修改成功");
         } catch (Exception e) {

@@ -6,12 +6,19 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.demo4.entity.User;
 import com.example.demo4.mapper.UserMapper;
 import com.example.demo4.service.UserService;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import java.util.HashMap;
 import java.util.Map;
 
 @Service
 public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements UserService {
+
+    private final PasswordEncoder passwordEncoder;
+
+    public UserServiceImpl(PasswordEncoder passwordEncoder) {
+        this.passwordEncoder = passwordEncoder;
+    }
 
     @Override
     public Map<String, Object> login(String username, String password) {
@@ -27,12 +34,24 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             throw new RuntimeException("用户不存在");
         }
 
-        if (!password.equals(user.getPassword())) {
+        String storedPassword = user.getPassword();
+        boolean bcryptPassword = storedPassword != null && storedPassword.startsWith("$2");
+        boolean passwordMatches = bcryptPassword
+                ? passwordEncoder.matches(password, storedPassword)
+                : password.equals(storedPassword);
+
+        if (!passwordMatches) {
             throw new RuntimeException("密码错误");
         }
 
         if (user.getStatus() == 0) {
             throw new RuntimeException("账号已被禁用");
+        }
+
+        // Upgrade legacy plaintext passwords after a successful login.
+        if (!bcryptPassword) {
+            user.setPassword(passwordEncoder.encode(password));
+            this.updateById(user);
         }
 
         Map<String, Object> result = new HashMap<>();
@@ -55,6 +74,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             throw new RuntimeException("用户名已存在");
         }
 
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
         user.setRole(0);
         user.setStatus(1);
         this.save(user);
