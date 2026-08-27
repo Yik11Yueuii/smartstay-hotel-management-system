@@ -141,18 +141,35 @@ document.getElementById('newFeedbackForm')?.addEventListener('submit', function(
     const content = document.getElementById('feedbackContent').value;
     const type = document.getElementById('feedbackType').value;
 
-    // TODO: 替换为真实API
-    alert('反馈提交成功! (模拟)');
-    hideFeedbackForm();
-    loadFeedback();
+    fetch('/api/feedback/create', {
+        method: 'POST',
+        headers: authenticatedHeaders(true),
+        body: JSON.stringify({ title, content, type: parseInt(type) })
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.code !== 200) throw new Error(data.message || '提交失败');
+            alert('反馈提交成功!');
+            hideFeedbackForm();
+            loadFeedback();
+        })
+        .catch(error => alert(error.message));
 });
 
 // 加载反馈列表
 function loadFeedback() {
-    // TODO: 替换为真实API
-    const feedbacks = [
-        { id: 1, title: '房间很干净', content: '服务很好', type: 2, status: 1, reply: '感谢您的好评!', createTime: '2024-01-25' }
-    ];
+    fetch('/api/feedback/list?page=1&size=100', { headers: authenticatedHeaders(false) })
+        .then(response => response.json())
+        .then(data => {
+            if (data.code !== 200) throw new Error(data.message || '加载失败');
+            renderFeedback(data.data.records);
+        })
+        .catch(error => {
+            document.getElementById('feedbackList').innerHTML = `<p>${error.message}</p>`;
+        });
+}
+
+function renderFeedback(feedbacks) {
 
     const typeMap = { 0: '建议', 1: '投诉', 2: '表扬' };
     const statusMap = { 0: '待处理', 1: '已处理' };
@@ -172,6 +189,12 @@ function loadFeedback() {
     `).join('');
 
     document.getElementById('feedbackList').innerHTML = html || '<p>暂无反馈记录</p>';
+}
+
+function authenticatedHeaders(json) {
+    const headers = { 'Authorization': 'Bearer ' + (localStorage.getItem('token') || '') };
+    if (json) headers['Content-Type'] = 'application/json';
+    return headers;
 }
 
 // 页面加载

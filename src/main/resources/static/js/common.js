@@ -23,6 +23,7 @@ document.addEventListener('DOMContentLoaded', function() {
         logoutBtn.addEventListener('click', function() {
             if (confirm('确定要退出登录吗?')) {
                 localStorage.removeItem('user');
+                localStorage.removeItem('token');
                 alert('已退出登录');
                 location.href = '/pages/user/index.html';
             }

@@ -32,8 +32,10 @@ public class AuthInterceptor implements HandlerInterceptor {
             throws Exception {
         boolean adminOnly = handler instanceof HandlerMethod
                 && ((HandlerMethod) handler).hasMethodAnnotation(AdminOnly.class);
+        boolean loginRequired = handler instanceof HandlerMethod
+                && ((HandlerMethod) handler).hasMethodAnnotation(LoginRequired.class);
         boolean userApi = request.getRequestURI().startsWith("/api/user/");
-        if (!userApi && !adminOnly) {
+        if (!userApi && !adminOnly && !loginRequired) {
             return true;
         }
 
