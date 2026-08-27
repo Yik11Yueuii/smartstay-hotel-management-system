@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.demo4.entity.User;
 import com.example.demo4.mapper.UserMapper;
 import com.example.demo4.service.UserService;
+import com.example.demo4.service.AuthTokenService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import java.util.HashMap;
@@ -15,9 +16,11 @@ import java.util.Map;
 public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements UserService {
 
     private final PasswordEncoder passwordEncoder;
+    private final AuthTokenService authTokenService;
 
-    public UserServiceImpl(PasswordEncoder passwordEncoder) {
+    public UserServiceImpl(PasswordEncoder passwordEncoder, AuthTokenService authTokenService) {
         this.passwordEncoder = passwordEncoder;
+        this.authTokenService = authTokenService;
     }
 
     @Override
@@ -57,7 +60,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         Map<String, Object> result = new HashMap<>();
         user.setPassword(null);
         result.put("user", user);
-        result.put("token", "token-" + user.getId());
+        result.put("token", authTokenService.createToken(user));
 
         return result;
     }

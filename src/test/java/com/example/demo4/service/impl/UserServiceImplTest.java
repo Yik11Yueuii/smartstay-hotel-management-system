@@ -2,6 +2,7 @@ package com.example.demo4.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.example.demo4.entity.User;
+import com.example.demo4.service.AuthTokenService;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -13,6 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 
@@ -58,7 +60,7 @@ class UserServiceImplTest {
 
     @SuppressWarnings("unchecked")
     private UserServiceImpl serviceReturning(User user) {
-        UserServiceImpl service = spy(new UserServiceImpl(passwordEncoder));
+        UserServiceImpl service = spy(new UserServiceImpl(passwordEncoder, mock(AuthTokenService.class)));
         doReturn(user).when(service).getOne(any(Wrapper.class));
         return service;
     }

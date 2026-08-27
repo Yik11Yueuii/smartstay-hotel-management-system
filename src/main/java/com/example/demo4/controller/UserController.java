@@ -3,6 +3,7 @@ package com.example.demo4.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.demo4.common.Result;
+import com.example.demo4.config.AuthInterceptor;
 import com.example.demo4.entity.User;
 import com.example.demo4.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,6 +49,18 @@ public class UserController {
         } catch (Exception e) {
             return Result.error(e.getMessage());
         }
+    }
+
+    /**
+     * 获取用户信息
+     */
+    @GetMapping("/me")
+    public Result<User> getCurrentUser(@RequestAttribute(AuthInterceptor.AUTH_USER_ID) Long userId) {
+        User user = userService.getById(userId);
+        if (user != null) {
+            user.setPassword(null);
+        }
+        return Result.success(user);
     }
 
     /**
