@@ -2,6 +2,7 @@ package com.example.demo4.service;
 
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.jwt.JWT;
+import com.example.demo4.common.AuthPrincipal;
 import com.example.demo4.entity.User;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -32,15 +33,21 @@ public class AuthTokenService {
                 .sign();
     }
 
-    public Long verifyAndGetUserId(String token) {
+    public AuthPrincipal verify(String token) {
         try {
             JWT jwt = JWT.of(token).setKey(secret);
             if (!jwt.verify() || !jwt.validate(0)) {
                 throw new IllegalArgumentException("登录凭证无效或已过期");
             }
-            return Long.valueOf(jwt.getPayload("sub").toString());
+            Long userId = Long.valueOf(jwt.getPayload("sub").toString());
+            Integer role = Integer.valueOf(jwt.getPayload("role").toString());
+            return new AuthPrincipal(userId, role);
         } catch (Exception exception) {
             throw new IllegalArgumentException("登录凭证无效或已过期");
         }
+    }
+
+    public Long verifyAndGetUserId(String token) {
+        return verify(token).getUserId();
     }
 }

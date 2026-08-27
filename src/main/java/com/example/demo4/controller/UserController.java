@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.demo4.common.Result;
 import com.example.demo4.config.AuthInterceptor;
+import com.example.demo4.config.AdminOnly;
 import com.example.demo4.entity.User;
 import com.example.demo4.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -67,6 +68,7 @@ public class UserController {
      * 获取用户信息
      */
     @GetMapping("/{id}")
+    @AdminOnly
     public Result<User> getById(@PathVariable Long id) {
         User user = userService.getById(id);
         if (user != null) {
@@ -79,6 +81,7 @@ public class UserController {
      * 更新用户信息
      */
     @PutMapping("/update")
+    @AdminOnly
     public Result<String> update(@RequestBody User user) {
         user.setPassword(null);
         userService.updateById(user);
@@ -89,9 +92,14 @@ public class UserController {
      * 修改密码
      */
     @PutMapping("/password")
-    public Result<String> updatePassword(@RequestBody Map<String, Object> params) {
+    public Result<String> updatePassword(
+            @RequestAttribute(AuthInterceptor.AUTH_USER_ID) Long authenticatedUserId,
+            @RequestBody Map<String, Object> params) {
         try {
             Long userId = Long.valueOf(params.get("userId").toString());
+            if (!authenticatedUserId.equals(userId)) {
+                return Result.error("不能修改其他用户的密码");
+            }
             String oldPassword = params.get("oldPassword").toString();
             String newPassword = params.get("newPassword").toString();
 
@@ -116,6 +124,7 @@ public class UserController {
      * 分页查询用户列表
      */
     @GetMapping("/list")
+    @AdminOnly
     public Result<Page<User>> list(
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "10") Integer size,

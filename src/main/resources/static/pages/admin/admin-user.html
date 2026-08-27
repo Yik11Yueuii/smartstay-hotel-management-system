@@ -112,6 +112,12 @@
 </div>
 
 <script>
+    function authHeaders(json) {
+        const headers = { 'Authorization': 'Bearer ' + (localStorage.getItem('token') || '') };
+        if (json) headers['Content-Type'] = 'application/json';
+        return headers;
+    }
+
     console.log('admin-user.js 开始执行');
 
     // 检查管理员登录
@@ -145,7 +151,7 @@
 
         console.log('请求URL:', url);
 
-        fetch(url)
+        fetch(url, { headers: authHeaders(false) })
             .then(response => response.json())
             .then(data => {
                 console.log('返回数据:', data);
@@ -203,7 +209,7 @@
 
     // 编辑用户
     function editUser(id) {
-        fetch('http://localhost:8080/api/user/' + id)
+        fetch('http://localhost:8080/api/user/' + id, { headers: authHeaders(false) })
             .then(response => response.json())
             .then(data => {
                 if (data.code === 200) {
@@ -231,9 +237,7 @@
 
         fetch('http://localhost:8080/api/user/update', {
             method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: authHeaders(true),
             body: JSON.stringify({
                 id: id,
                 status: newStatus
@@ -275,9 +279,7 @@
 
         fetch('http://localhost:8080/api/user/update', {
             method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: authHeaders(true),
             body: JSON.stringify(userData)
         })
             .then(response => response.json())
