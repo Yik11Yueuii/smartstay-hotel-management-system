@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>后台首页 - 酒店管理系统</title>
+    <link rel="stylesheet" href="/css/common.css">
+    <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+<!-- 管理员导航栏 -->
+<nav class="navbar">
+    <div class="container">
+        <div class="nav-logo">🏨 酒店管理后台</div>
+        <div class="nav-links">
+            <a href="/pages/admin/admin-dashboard.html" class="active">首页</a>
+            <a href="/pages/admin/admin-room.html">客房管理</a>
+            <a href="/pages/admin/admin-booking.html">订单管理</a>
+            <a href="/pages/admin/admin-user.html">用户管理</a>
+        </div>
+        <div class="nav-user">
+            <span id="adminName">管理员</span>
+            <button id="logoutBtn">退出</button>
+        </div>
+    </div>
+</nav>
+
+<div class="container" style="margin-top: 30px;">
+    <h1>数据统计</h1>
+
+    <!-- 统计卡片 -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon" style="background: #409eff;">📊</div>
+            <div class="stat-info">
+                <div class="stat-label">总预订数</div>
+                <div class="stat-value" id="totalBookings">0</div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon" style="background: #67c23a;">🏨</div>
+            <div class="stat-info">
+                <div class="stat-label">可用客房</div>
+                <div class="stat-value" id="availableRooms">0</div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon" style="background: #e6a23c;">👥</div>
+            <div class="stat-info">
+                <div class="stat-label">注册用户</div>
+                <div class="stat-value" id="totalUsers">0</div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon" style="background: #f56c6c;">💰</div>
+            <div class="stat-info">
+                <div class="stat-label">今日营收</div>
+                <div class="stat-value">¥<span id="todayRevenue">0</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 最近预订 -->
+    <div class="card" style="margin-top: 30px;">
+        <h2>最近预订</h2>
+        <table class="table">
+            <thead>
+            <tr>
+                <th>订单号</th>
+                <th>客房</th>
+                <th>用户</th>
+                <th>入住日期</th>
+                <th>状态</th>
+                <th>金额</th>
+            </tr>
+            </thead>
+            <tbody id="recentBookings">
+            <tr><td colspan="6" style="text-align:center;">加载中...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    // 检查管理员登录
+    function checkAdminLogin() {
+        const admin = JSON.parse(localStorage.getItem('admin') || 'null');
+        if (!admin || admin.role !== 1) {
+            alert('请先登录管理员账号');
+            location.href = '/pages/admin/admin-login.html';
+            return;
+        }
+        document.getElementById('adminName').textContent = admin.nickname || admin.username;
+    }
+
+    // 退出登录
+    document.getElementById('logoutBtn')?.addEventListener('click', function() {
+        if (confirm('确定要退出吗?')) {
+            localStorage.removeItem('admin');
+            location.href = '/pages/admin/admin-login.html';
+        }
+    });
+
+    // 加载统计数据
+    function loadStats() {
+        // TODO: 替换为真实API
+        document.getElementById('totalBookings').textContent = '24';
+        document.getElementById('availableRooms').textContent = '8';
+        document.getElementById('totalUsers').textContent = '156';
+        document.getElementById('todayRevenue').textContent = '8,960';
+    }
+
+    // 加载最近预订
+    function loadRecentBookings() {
+        // TODO: 替换为真实API
+        const bookings = [
+            { orderNo: 'ORD202401250001', roomName: '豪华单人间A', userName: '张三', checkInDate: '2024-01-28', status: 0, totalAmount: 576 },
+            { orderNo: 'ORD202401250002', roomName: '标准双人间B', userName: '李四', checkInDate: '2024-02-01', status: 1, totalAmount: 656 },
+            { orderNo: 'ORD202401250003', roomName: '商务套房', userName: '王五', checkInDate: '2024-02-05', status: 0, totalAmount: 1576 }
+        ];
+
+        const statusMap = { 0: '待确认', 1: '已确认', 2: '已取消', 3: '已入住', 4: '已退房' };
+        const statusClass = { 0: 'warning', 1: 'success', 2: 'danger', 3: 'info', 4: 'info' };
+
+        const html = bookings.map(b => `
+                <tr>
+                    <td>${b.orderNo}</td>
+                    <td>${b.roomName}</td>
+                    <td>${b.userName}</td>
+                    <td>${b.checkInDate}</td>
+                    <td><span class="badge badge-${statusClass[b.status]}">${statusMap[b.status]}</span></td>
+                    <td><strong style="color:#f56c6c;">¥${b.totalAmount}</strong></td>
+                </tr>
+            `).join('');
+
+        document.getElementById('recentBookings').innerHTML = html;
+    }
+
+    // 页面加载
+    checkAdminLogin();
+    loadStats();
+    loadRecentBookings();
+</script>
+</body>
+</html>

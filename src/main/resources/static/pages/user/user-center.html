@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>个人中心 - 酒店管理系统</title>
+    <link rel="stylesheet" href="/css/common.css">
+    <style>
+        .user-container {
+            max-width: 1200px;
+            margin: 30px auto;
+            display: flex;
+            gap: 20px;
+        }
+        .sidebar {
+            width: 200px;
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            height: fit-content;
+        }
+        .sidebar-menu {
+            list-style: none;
+        }
+        .sidebar-menu li {
+            padding: 12px;
+            cursor: pointer;
+            border-radius: 5px;
+            margin-bottom: 5px;
+            transition: all 0.3s;
+        }
+        .sidebar-menu li:hover,
+        .sidebar-menu li.active {
+            background: #667eea;
+            color: white;
+        }
+        .main-content {
+            flex: 1;
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .order-item {
+            border: 1px solid #f0f0f0;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        .order-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+    </style>
+</head>
+<body>
+<!-- 导航栏 -->
+<nav class="navbar">
+    <div class="container">
+        <div class="nav-logo">🏨 酒店管理系统</div>
+        <div class="nav-links">
+            <a href="/pages/user/index.html">首页</a>
+            <a href="/pages/user/room-list.html">客房列表</a>
+            <a href="/pages/user/user-center.html" class="active">个人中心</a>
+        </div>
+        <div class="nav-user">
+            <span id="userName">未登录</span>
+            <a href="/pages/user/login.html" id="loginBtn">登录</a>
+            <button id="logoutBtn" style="display:none;">退出</button>
+        </div>
+    </div>
+</nav>
+
+<div class="container user-container">
+    <!-- 侧边栏 -->
+    <div class="sidebar">
+        <ul class="sidebar-menu">
+            <li class="active" onclick="showTab('profile')">个人资料</li>
+            <li onclick="showTab('bookings')">我的预订</li>
+            <li onclick="showTab('feedback')">我的反馈</li>
+        </ul>
+    </div>
+
+    <!-- 主内容区 -->
+    <div class="main-content">
+        <!-- 个人资料 -->
+        <div id="profile" class="tab-content active">
+            <h2>个人资料</h2>
+            <form id="profileForm">
+                <div class="form-group">
+                    <label>用户名</label>
+                    <input type="text" id="username" disabled>
+                </div>
+                <div class="form-group">
+                    <label>昵称</label>
+                    <input type="text" id="nickname">
+                </div>
+                <div class="form-group">
+                    <label>手机号</label>
+                    <input type="tel" id="phone">
+                </div>
+                <button type="submit" class="btn btn-primary">保存修改</button>
+            </form>
+
+            <hr style="margin: 30px 0;">
+
+            <h3>修改密码</h3>
+            <form id="passwordForm">
+                <div class="form-group">
+                    <label>旧密码</label>
+                    <input type="password" id="oldPassword" required>
+                </div>
+                <div class="form-group">
+                    <label>新密码</label>
+                    <input type="password" id="newPassword" required>
+                </div>
+                <div class="form-group">
+                    <label>确认密码</label>
+                    <input type="password" id="confirmPassword" required>
+                </div>
+                <button type="submit" class="btn btn-primary">修改密码</button>
+            </form>
+        </div>
+
+        <!-- 我的预订 -->
+        <div id="bookings" class="tab-content">
+            <h2>我的预订</h2>
+            <div id="bookingList"></div>
+        </div>
+
+        <!-- 我的反馈 -->
+        <div id="feedback" class="tab-content">
+            <h2>我的反馈</h2>
+            <button class="btn btn-primary" onclick="showFeedbackForm()" style="margin-bottom:20px;">提交反馈</button>
+
+            <div id="feedbackForm" style="display:none; margin-bottom:20px;">
+                <form id="newFeedbackForm">
+                    <div class="form-group">
+                        <label>反馈标题</label>
+                        <input type="text" id="feedbackTitle" required>
+                    </div>
+                    <div class="form-group">
+                        <label>反馈内容</label>
+                        <textarea id="feedbackContent" rows="5" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>反馈类型</label>
+                        <select id="feedbackType">
+                            <option value="0">建议</option>
+                            <option value="1">投诉</option>
+                            <option value="2">表扬</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">提交</button>
+                    <button type="button" class="btn btn-secondary" onclick="hideFeedbackForm()">取消</button>
+                </form>
+            </div>
+
+            <div id="feedbackList"></div>
+        </div>
+    </div>
+</div>
+
+<script src="/js/common.js"></script>
+<script src="/js/user-center.js"></script>
+</body>
+</html>

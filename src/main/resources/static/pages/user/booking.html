@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>预订客房 - 酒店管理系统</title>
+    <link rel="stylesheet" href="/css/common.css">
+    <link rel="stylesheet" href="/css/user.css">
+</head>
+<body>
+<!-- 导航栏 -->
+<nav class="navbar">
+    <div class="nav-container">
+        <div class="nav-brand">🏨 酒店管理系统</div>
+        <div class="nav-menu">
+            <a href=" ">首页</a >
+            <a href="/pages/user/room-list.html">客房列表</a >
+            <a href="/pages/user/user-center.html">个人中心</a >
+        </div>
+        <div class="nav-user">
+            <span id="userName">张三</span>
+            <button class="btn btn-secondary" id="logoutBtn">退出</button>
+        </div>
+    </div>
+</nav>
+
+<!-- 主要内容 -->
+<main class="main-content">
+    <div class="container">
+        <h2>预订客房</h2>
+
+        <div class="booking-container">
+            <!-- 客房信息 -->
+            <div class="booking-section">
+                <h3>客房信息</h3>
+                <div id="roomInfo" class="room-info-box">
+                    加载中...
+                </div>
+            </div>
+
+            <!-- 预订表单 -->
+            <form id="bookingForm" class="booking-form">
+                <div class="form-group">
+                    <label for="checkInDate">入住日期 *</label>
+                    <input type="date" id="checkInDate" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="checkOutDate">退房日期 *</label>
+                    <input type="date" id="checkOutDate" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="contactName">联系人姓名 *</label>
+                    <input type="text" id="contactName" placeholder="请输入联系人姓名" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="contactPhone">联系电话 *</label>
+                    <input type="tel" id="contactPhone" placeholder="请输入联系电话" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="remark">备注</label>
+                    <textarea id="remark" rows="3" placeholder="其他需求或备注"></textarea>
+                </div>
+
+                <!-- 价格信息 -->
+                <div class="price-summary">
+                    <div class="price-item">
+                        <span>单价:</span>
+                        <span>¥<span id="unitPrice">0</span>/晚</span>
+                    </div>
+                    <div class="price-item">
+                        <span>入住天数:</span>
+                        <span><span id="days">0</span>天</span>
+                    </div>
+                    <div class="price-item total">
+                        <span>总价:</span>
+                        <span class="total-price">¥<span id="totalPrice">0</span></span>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block">确认预订</button>
+            </form>
+        </div>
+    </div>
+</main>
+
+<script>
+    let currentRoom = null;
+
+    // 获取URL参数
+    function getQueryParam(param) {
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get(param);
+    }
+
+    // 加载客房信息
+    function loadRoomInfo() {
+        const roomId = getQueryParam('roomId');
+
+        if (!roomId) {
+            alert('缺少客房参数');
+            window.location.href = '/pages/user/room-list.html';
+            return;
+        }
+
+        fetch('http://localhost:8080/api/room/' + roomId)
+            .then(response => response.json())
+            .then(data => {
+                if (data.code === 200) {
+                    currentRoom = data.data;
+                    const price = currentRoom.isPromotion ? currentRoom.promotionPrice : currentRoom.price;
+                    document.getElementById('roomInfo').innerHTML =
+                        '<strong>' + currentRoom.roomName + '</strong> (房间号: ' + currentRoom.roomNumber + ')<br>' +
+                        '价格: ¥' + price + '/晚 ' + (currentRoom.isPromotion ? '<span class="badge badge-danger">促销</span>' : '');
+                    document.getElementById('unitPrice').textContent = price;
+                } else {
+                    alert('加载客房信息失败: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('加载失败:', error);
+                alert('加载客房信息失败,请检查后端是否启动');
+            });
+    }
+
+    // 计算价格
+    function calculatePrice() {
+        const checkIn = document.getElementById('checkInDate').value;
+        const checkOut = document.getElementById('checkOutDate').value;
+
+        if (checkIn && checkOut && currentRoom) {
+            const date1 = new Date(checkIn);
+            const date2 = new Date(checkOut);
+            const days = Math.ceil((date2 - date1) / (1000 * 60 * 60 * 24));
+
+            if (days > 0) {
+                const price = currentRoom.isPromotion ? currentRoom.promotionPrice : currentRoom.price;
+                const total = days * price;
+
+                document.getElementById('days').textContent = days;
+                document.getElementById('totalPrice').textContent = total;
+            } else {
+                document.getElementById('days').textContent = 0;
+                document.getElementById('totalPrice').textContent = 0;
+            }
+        }
+    }
+
+    // 监听日期变化
+    document.getElementById('checkInDate').addEventListener('change', calculatePrice);
+    document.getElementById('checkOutDate').addEventListener('change', calculatePrice);
+
+    // 设置最小日期为今天
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('checkInDate').min = today;
+    document.getElementById('checkOutDate').min = today;
+
+    // 提交预订
+    document.getElementById('bookingForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const user = JSON.parse(localStorage.getItem('user') || 'null');
+        if (!user) {
+            alert('请先登录');
+            window.location.href = '/pages/user/login.html';
+            return;
+        }
+
+        const checkIn = document.getElementById('checkInDate').value;
+        const checkOut = document.getElementById('checkOutDate').value;
+        const contactName = document.getElementById('contactName').value;
+        const contactPhone = document.getElementById('contactPhone').value;
+        const remark = document.getElementById('remark').value;
+        const days = parseInt(document.getElementById('days').textContent);
+        const total = parseFloat(document.getElementById('totalPrice').textContent);
+
+        if (days <= 0) {
+            alert('请选择有效的入住和退房日期');
+            return;
+        }
+
+        const bookingData = {
+            userId: user.id,
+            roomId: currentRoom.id,
+            roomName: currentRoom.roomName,
+            roomNumber: currentRoom.roomNumber,
+            checkInDate: checkIn,
+            checkOutDate: checkOut,
+            days: days,
+            price: currentRoom.isPromotion ? currentRoom.promotionPrice : currentRoom.price,
+            totalAmount: total,
+            contactName: contactName,
+            contactPhone: contactPhone,
+            remark: remark
+        };
+
+        console.log('提交预订数据:', bookingData);
+
+        fetch('http://localhost:8080/api/booking/create', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(bookingData)
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.code === 200) {
+                    alert('预订成功!');
+                    window.location.href = '/pages/user/user-center.html';
+                } else {
+                    alert('预订失败: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('预订失败:', error);
+                alert('网络错误,请检查后端是否启动');
+            });
+    });
+
+    // 检查登录
+    function checkLogin() {
+        const user = JSON.parse(localStorage.getItem('user') || 'null');
+        if (user) {
+            document.getElementById('userName').textContent = user.nickname || user.username;
+        } else {
+            document.getElementById('userName').textContent = '未登录';
+        }
+    }
+
+    // 退出登录
+    document.getElementById('logoutBtn').addEventListener('click', function() {
+        if (confirm('确定要退出吗?')) {
+            localStorage.removeItem('user');
+            localStorage.removeItem('token');
+            window.location.href = '/pages/user/login.html';
+        }
+    });
+
+    // 页面加载
+    checkLogin();
+    loadRoomInfo();
+</script>
+</body>
+</html>

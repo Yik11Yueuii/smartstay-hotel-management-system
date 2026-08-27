@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>客房管理 - 酒店管理系统</title>
+    <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+<div class="admin-container">
+    <!-- 侧边栏 -->
+    <aside class="admin-sidebar">
+        <div class="sidebar-header">
+            <h2>🏨 酒店管理后台</h2>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="/pages/admin/admin-dashboard.html">首页</a>
+            <a href="/pages/admin/admin-room.html" class="active">客房管理</a>
+            <a href="/pages/admin/admin-booking.html">订单管理</a>
+            <a href="/pages/admin/admin-user.html">用户管理</a>
+        </nav>
+    </aside>
+
+    <!-- 主内容区 -->
+    <main class="admin-main">
+        <header class="admin-header">
+            <h1>客房管理</h1>
+            <div class="header-actions">
+                <span id="adminName">管理员</span>
+                <button class="btn btn-secondary" id="logoutBtn">退出</button>
+            </div>
+        </header>
+
+        <div class="content-section">
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="搜索客房名称或房间号">
+                <select id="typeFilter">
+                    <option value="">全部类型</option>
+                    <option value="单人间">单人间</option>
+                    <option value="双人间">双人间</option>
+                    <option value="套房">套房</option>
+                </select>
+                <button class="btn btn-primary" onclick="searchRooms()">搜索</button>
+                <button class="btn btn-primary" onclick="showAddModal()">+ 添加客房</button>
+            </div>
+
+            <table class="data-table">
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>客房名称</th>
+                    <th>房间号</th>
+                    <th>类型</th>
+                    <th>价格</th>
+                    <th>床型</th>
+                    <th>状态</th>
+                    <th>操作</th>
+                </tr>
+                </thead>
+                <tbody id="roomList">
+                <tr>
+                    <td colspan="8" style="text-align:center;">加载中...</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+</div>
+
+<!-- 添加/编辑客房弹窗 -->
+<div id="roomModal" class="modal" style="display:none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="modalTitle">添加客房</h3>
+            <span class="close" onclick="closeModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <form id="roomForm">
+                <input type="hidden" id="roomId">
+
+                <div class="form-group">
+                    <label>客房名称 *</label>
+                    <input type="text" id="roomName" required>
+                </div>
+
+                <div class="form-group">
+                    <label>房间号 *</label>
+                    <input type="text" id="roomNumber" required>
+                </div>
+
+                <div class="form-group">
+                    <label>客房类型 *</label>
+                    <select id="roomType" required>
+                        <option value="">请选择</option>
+                        <option value="单人间">单人间</option>
+                        <option value="双人间">双人间</option>
+                        <option value="套房">套房</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>价格 *</label>
+                    <input type="number" id="price" min="0" step="0.01" required>
+                </div>
+
+                <div class="form-group">
+                    <label>床型 *</label>
+                    <select id="bedType" required>
+                        <option value="">请选择</option>
+                        <option value="单人床">单人床</option>
+                        <option value="双人床">双人床</option>
+                        <option value="大床">大床</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>最大入住人数 *</label>
+                    <input type="number" id="maxPeople" min="1" value="1" required>
+                </div>
+
+                <div class="form-group">
+                    <label>客房描述</label>
+                    <textarea id="description" rows="3"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>状态 *</label>
+                    <select id="status" required>
+                        <option value="1">可预订</option>
+                        <option value="2">已预订</option>
+                        <option value="3">已入住</option>
+                        <option value="4">维护中</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="isPromotion"> 设为促销
+                    </label>
+                </div>
+
+                <div class="form-group" id="promotionPriceGroup" style="display:none;">
+                    <label>促销价格</label>
+                    <input type="number" id="promotionPrice" min="0" step="0.01">
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">保存</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">取消</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    console.log('admin-room.js 开始执行');
+
+    // 检查管理员登录
+    function checkAdminLogin() {
+        const admin = JSON.parse(localStorage.getItem('admin') || 'null');
+        if (!admin || admin.role !== 1) {
+            alert('请先登录管理员账号');
+            location.href = '/pages/admin/admin-login.html';
+            return false;
+        }
+        document.getElementById('adminName').textContent = admin.nickname || admin.username;
+        return true;
+    }
+
+    // 退出登录
+    document.getElementById('logoutBtn').addEventListener('click', function() {
+        if (confirm('确定要退出吗?')) {
+            localStorage.removeItem('admin');
+            location.href = '/pages/admin/admin-login.html';
+        }
+    });
+
+    // 加载客房列表
+    function loadRooms() {
+        console.log('开始加载客房列表...');
+
+        const searchInput = document.getElementById('searchInput').value;
+        const typeFilter = document.getElementById('typeFilter').value;
+
+        let url = 'http://localhost:8080/api/room/list?page=1&size=100';
+        if (searchInput) url += '&roomName=' + searchInput;
+        if (typeFilter) url += '&roomType=' + typeFilter;
+
+        console.log('请求URL:', url);
+
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                console.log('返回数据:', data);
+                if (data.code === 200) {
+                    renderRooms(data.data.records);
+                } else {
+                    alert('加载失败: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('加载失败:', error);
+                alert('网络错误');
+            });
+    }
+
+    // 渲染客房列表
+    function renderRooms(rooms) {
+        console.log('渲染客房数量:', rooms ? rooms.length : 0);
+
+        const statusMap = { 1: '可预订', 2: '已预订', 3: '已入住', 4: '维护中' };
+        const statusClass = { 1: 'success', 2: 'warning', 3: 'info', 4: 'danger' };
+
+        if (!rooms || rooms.length === 0) {
+            document.getElementById('roomList').innerHTML =
+                '<tr><td colspan="8" style="text-align:center;">暂无客房数据</td></tr>';
+            return;
+        }
+
+        const html = rooms.map(function(r) {
+            return '<tr>' +
+                '<td>' + r.id + '</td>' +
+                '<td>' + r.roomName + (r.isPromotion ? '<span class="badge badge-danger">促销</span>' : '') + '</td>' +
+                '<td>' + r.roomNumber + '</td>' +
+                '<td>' + r.roomType + '</td>' +
+                '<td>¥' + r.price + (r.isPromotion ? ' <small>(促销价:¥' + r.promotionPrice + ')</small>' : '') + '</td>' +
+                '<td>' + r.bedType + '</td>' +
+                '<td><span class="badge badge-' + statusClass[r.status] + '">' + statusMap[r.status] + '</span></td>' +
+                '<td class="action-buttons">' +
+                '<button class="btn btn-primary btn-sm" onclick="editRoom(' + r.id + ')">编辑</button> ' +
+                '<button class="btn btn-danger btn-sm" onclick="deleteRoom(' + r.id + ')">删除</button>' +
+                '</td>' +
+                '</tr>';
+        }).join('');
+
+        document.getElementById('roomList').innerHTML = html;
+    }
+
+    // 搜索
+    function searchRooms() {
+        loadRooms();
+    }
+
+    // 显示添加弹窗
+    function showAddModal() {
+        document.getElementById('modalTitle').textContent = '添加客房';
+        document.getElementById('roomForm').reset();
+        document.getElementById('roomId').value = '';
+        document.getElementById('roomModal').style.display = 'block';
+    }
+
+    // 编辑客房
+    function editRoom(id) {
+        fetch('http://localhost:8080/api/room/' + id)
+            .then(response => response.json())
+            .then(data => {
+                if (data.code === 200) {
+                    const room = data.data;
+                    document.getElementById('modalTitle').textContent = '编辑客房';
+                    document.getElementById('roomId').value = room.id;
+                    document.getElementById('roomName').value = room.roomName;
+                    document.getElementById('roomNumber').value = room.roomNumber;
+                    document.getElementById('roomType').value = room.roomType;
+                    document.getElementById('price').value = room.price;
+                    document.getElementById('bedType').value = room.bedType;
+                    document.getElementById('maxPeople').value = room.maxPeople;
+                    document.getElementById('description').value = room.description || '';
+                    document.getElementById('status').value = room.status;
+                    document.getElementById('isPromotion').checked = room.isPromotion === 1;
+                    document.getElementById('promotionPrice').value = room.promotionPrice || '';
+
+                    if (room.isPromotion === 1) {
+                        document.getElementById('promotionPriceGroup').style.display = 'block';
+                    }
+
+                    document.getElementById('roomModal').style.display = 'block';
+                }
+            })
+            .catch(error => {
+                console.error('加载失败:', error);
+                alert('加载客房信息失败');
+            });
+    }
+
+    // 删除客房
+    function deleteRoom(id) {
+        if (!confirm('确定要删除这个客房吗?')) return;
+
+        fetch('http://localhost:8080/api/room/' + id, {
+            method: 'DELETE'
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.code === 200) {
+                    alert('删除成功!');
+                    loadRooms();
+                } else {
+                    alert('删除失败: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('删除失败:', error);
+                alert('网络错误');
+            });
+    }
+
+    // 关闭弹窗
+    function closeModal() {
+        document.getElementById('roomModal').style.display = 'none';
+    }
+
+    // 促销复选框变化
+    document.getElementById('isPromotion').addEventListener('change', function() {
+        if (this.checked) {
+            document.getElementById('promotionPriceGroup').style.display = 'block';
+        } else {
+            document.getElementById('promotionPriceGroup').style.display = 'none';
+        }
+    });
+
+    // 提交表单
+    document.getElementById('roomForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const roomId = document.getElementById('roomId').value;
+        const roomData = {
+            roomName: document.getElementById('roomName').value,
+            roomNumber: document.getElementById('roomNumber').value,
+            roomType: document.getElementById('roomType').value,
+            price: parseFloat(document.getElementById('price').value),
+            bedType: document.getElementById('bedType').value,
+            maxPeople: parseInt(document.getElementById('maxPeople').value),
+            description: document.getElementById('description').value,
+            status: parseInt(document.getElementById('status').value),
+            isPromotion: document.getElementById('isPromotion').checked ? 1 : 0,
+            promotionPrice: document.getElementById('promotionPrice').value ? parseFloat(document.getElementById('promotionPrice').value) : null
+        };
+
+        console.log('提交客房数据:', roomData);
+
+        const url = roomId ?
+            'http://localhost:8080/api/room/update' :
+            'http://localhost:8080/api/room/add';
+
+        const method = 'POST';
+
+        if (roomId) {
+            roomData.id = parseInt(roomId);
+        }
+
+        fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(roomData)
+        })
+            .then(response => response.json())
+            .then(data => {
+                console.log('保存返回:', data);
+                if (data.code === 200) {
+                    alert(roomId ? '更新成功!' : '添加成功!');
+                    closeModal();
+                    loadRooms();
+                } else {
+                    alert('保存失败: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('保存失败:', error);
+                alert('网络错误,请检查后端是否启动');
+            });
+    });
+
+    // 页面加载
+    window.addEventListener('DOMContentLoaded', function() {
+        console.log('页面DOM加载完成');
+        if (checkAdminLogin()) {
+            loadRooms();
+        }
+    });
+</script>
+
+<style>
+    /* 弹窗样式 */
+    .modal {
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0,0,0,0.5);
+    }
+
+    .modal-content {
+        background-color: #fff;
+        margin: 5% auto;
+        padding: 0;
+        border-radius: 8px;
+        width: 600px;
+        max-width: 90%;
+        max-height: 80vh;
+        overflow-y: auto;
+    }
+
+    .modal-header {
+        padding: 20px;
+        border-bottom: 1px solid #eee;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .modal-header h3 {
+        margin: 0;
+    }
+
+    .close {
+        font-size: 28px;
+        font-weight: bold;
+        cursor: pointer;
+        color: #999;
+    }
+
+    .close:hover {
+        color: #333;
+    }
+
+    .modal-body {
+        padding: 20px;
+    }
+
+    .form-group {
+        margin-bottom: 15px;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: 500;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+
+    .form-actions {
+        margin-top: 20px;
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+    }
+
+    .badge {
+        padding: 2px 8px;
+        border-radius: 3px;
+        font-size: 12px;
+        margin-left: 5px;
+    }
+
+    .badge-success { background: #67c23a; color: white; }
+    .badge-warning { background: #e6a23c; color: white; }
+    .badge-info { background: #409eff; color: white; }
+    .badge-danger { background: #f56c6c; color: white; }
+</style>
+</body>
+</html>

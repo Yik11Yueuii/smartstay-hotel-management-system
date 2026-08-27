@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>订单管理 - 酒店管理系统</title>
+    <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+<div class="admin-container">
+    <!-- 侧边栏 -->
+    <aside class="admin-sidebar">
+        <div class="sidebar-header">
+            <h2>🏨 酒店管理后台</h2>
+        </div>
+        <nav class="sidebar-nav">
+            <a href=" ">首页</a >
+            <a href="/pages/admin/admin-room.html">客房管理</a >
+            <a href="/pages/admin/admin-booking.html" class="active">订单管理</a >
+            <a href="/pages/admin/admin-user.html">用户管理</a >
+        </nav>
+    </aside>
+
+    <!-- 主内容区 -->
+    <main class="admin-main">
+        <header class="admin-header">
+            <h1>订单管理</h1>
+            <div class="header-actions">
+                <span id="adminName">管理员</span>
+                <button class="btn btn-secondary" id="logoutBtn">退出</button>
+            </div>
+        </header>
+
+        <div class="content-section">
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="搜索订单号或客房名称">
+                <select id="statusFilter">
+                    <option value="">全部状态</option>
+                    <option value="0">待确认</option>
+                    <option value="1">已确认</option>
+                    <option value="2">已取消</option>
+                    <option value="3">已入住</option>
+                    <option value="4">已退房</option>
+                </select>
+                <button class="btn btn-primary" onclick="searchBookings()">搜索</button>
+            </div>
+
+            <table class="data-table">
+                <thead>
+                <tr>
+                    <th>订单号</th>
+                    <th>用户</th>
+                    <th>客房</th>
+                    <th>入住日期</th>
+                    <th>退房日期</th>
+                    <th>天数</th>
+                    <th>金额</th>
+                    <th>状态</th>
+                    <th>操作</th>
+                </tr>
+                </thead>
+                <tbody id="bookingList">
+                <tr>
+                    <td colspan="9" style="text-align:center;">加载中...</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+</div>
+
+<script>
+    console.log('admin-booking.js 开始执行');
+
+    // 检查管理员登录
+    function checkAdminLogin() {
+        const admin = JSON.parse(localStorage.getItem('admin') || 'null');
+        if (!admin || admin.role !== 1) {
+            alert('请先登录管理员账号');
+            location.href = '/pages/admin/admin-login.html';
+            return false;
+        }
+        document.getElementById('adminName').textContent = admin.nickname || admin.username;
+        return true;
+    }
+
+    // 退出登录
+    document.getElementById('logoutBtn').addEventListener('click', function() {
+        if (confirm('确定要退出吗?')) {
+            localStorage.removeItem('admin');
+            location.href = '/pages/admin/admin-login.html';
+        }
+    });
+
+    // 加载订单列表
+    function loadBookings() {
+        console.log('开始加载订单列表...');
+
+        const searchInput = document.getElementById('searchInput').value;
+        const statusFilter = document.getElementById('statusFilter').value;
+
+        let url = 'http://localhost:8080/api/booking/list?page=1&size=100';
+        if (searchInput) url += '&orderNo=' + searchInput;
+        if (statusFilter !== '') url += '&status=' + statusFilter;
+
+        console.log('请求URL:', url);
+
+        fetch(url)
+            .then(response => {
+                console.log('响应状态:', response.status);
+                if (!response.ok) {
+                    throw new Error('HTTP error ' + response.status);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('返回数据:', data);
+                if (data.code === 200) {
+                    renderBookings(data.data.records);
+                } else {
+                    alert('加载失败: ' + data.message);
+                    document.getElementById('bookingList').innerHTML =
+                        '<tr><td colspan="9" style="text-align:center;">加载失败: ' + data.message + '</td></tr>';
+                }
+            })
+            .catch(error => {
+                console.error('加载失败:', error);
+                document.getElementById('bookingList').innerHTML =
+                    '<tr><td colspan="9" style="text-align:center; color:red;">网络错误: ' + error.message + '</td></tr>';
+            });
+    }
+
+    // 渲染订单列表
+    function renderBookings(bookings) {
+        console.log('渲染订单数量:', bookings ? bookings.length : 0);
+
+        const statusMap = {
+            0: '待确认',
+            1: '已确认',
+            2: '已取消',
+            3: '已入住',
+            4: '已退房'
+        };
+
+        const statusClass = {
+            0: 'warning',
+            1: 'success',
+            2: 'danger',
+            3: 'info',
+            4: 'info'
+        };
+
+        if (!bookings || bookings.length === 0) {
+            document.getElementById('bookingList').innerHTML =
+                '<tr><td colspan="9" style="text-align:center;">暂无订单数据</td></tr>';
+            return;
+        }
+
+        const html = bookings.map(function(b) {
+            return '<tr>' +
+                '<td>' + (b.orderNo || '无') + '</td>' +
+                '<td>用户' + (b.userId || '未知') + '</td>' +
+                '<td>' + (b.roomName || '未知') + ' (' + (b.roomNumber || '无') + ')</td>' +
+                '<td>' + (b.checkInDate || '无') + '</td>' +
+                '<td>' + (b.checkOutDate || '无') + '</td>' +
+                '<td>' + (b.days || 0) + '天</td>' +
+                '<td><strong style="color:#f56c6c;">¥' + (b.totalAmount || 0) + '</strong></td>' +
+                '<td><span class="badge badge-' + (statusClass[b.status] || 'info') + '">' + (statusMap[b.status] || '未知') + '</span></td>' +
+                '<td class="action-buttons">' +
+                (b.status === 0 ? '<button class="btn btn-primary btn-sm" onclick="confirmBooking(' + b.id + ')">确认</button>' : '') +
+                (b.status === 1 ? '<button class="btn btn-primary btn-sm" onclick="showCheckIn(' + b.id + ')">办理入住</button>' : '') +
+                (b.status === 3 ? '<button class="btn btn-primary btn-sm" onclick="showCheckOut(' + b.id + ')">办理退房</button>' : '') +
+                '</td>' +
+                '</tr>';
+        }).join('');
+
+        document.getElementById('bookingList').innerHTML = html;
+        console.log('订单渲染完成');
+    }
+
+    // 搜索
+    function searchBookings() {
+        loadBookings();
+    }
+
+    // 确认订单
+    function confirmBooking(id) {
+        if (!confirm('确定要确认此订单吗?')) return;
+
+        fetch('http://localhost:8080/api/booking/confirm/' + id, {
+            method: 'PUT'
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.code === 200) {
+                    alert('确认成功!');
+                    loadBookings();
+                } else {
+                    alert('确认失败: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('确认失败:', error);
+                alert('网络错误');
+            });
+    }
+
+    // 办理入住
+    function showCheckIn(id) {
+        const guestName = prompt('请输入客人姓名:');
+        if (!guestName) return;
+
+        const guestIdCard = prompt('请输入身份证号:');
+        if (!guestIdCard) return;
+
+        const deposit = prompt('请输入押金金额:', '200');
+        if (!deposit) return;
+
+        fetch('http://localhost:8080/api/booking/checkin', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                bookingId: id,
+                guestName: guestName,
+                guestIdCard: guestIdCard,
+                deposit: parseFloat(deposit)
+            })
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.code === 200) {
+                    alert('入住成功!');
+                    loadBookings();
+                } else {
+                    alert('入住失败: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('入住失败:', error);
+                alert('网络错误');
+            });
+    }
+
+    // 办理退房
+    function showCheckOut(id) {
+        const depositReturn = prompt('请输入退还押金:', '200');
+        if (depositReturn === null) return;
+
+        const additionalCharges = prompt('请输入额外费用:', '0');
+        if (additionalCharges === null) return;
+
+        fetch('http://localhost:8080/api/booking/checkout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                bookingId: id,
+                depositReturn: parseFloat(depositReturn),
+                additionalCharges: parseFloat(additionalCharges),
+                remark: ''
+            })
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.code === 200) {
+                    alert('退房成功!');
+                    loadBookings();
+                } else {
+                    alert('退房失败: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('退房失败:', error);
+                alert('网络错误');
+            });
+    }
+
+    // 页面加载时执行
+    window.addEventListener('DOMContentLoaded', function() {
+        console.log('页面DOM加载完成');
+        if (checkAdminLogin()) {
+            console.log('管理员已登录,开始加载订单');
+            loadBookings();
+        }
+    });
+</script>
+</body>
+</html>

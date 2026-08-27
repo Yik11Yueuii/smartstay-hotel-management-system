@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户管理 - 酒店管理系统</title>
+    <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+<div class="admin-container">
+    <!-- 侧边栏 -->
+    <aside class="admin-sidebar">
+        <div class="sidebar-header">
+            <h2>🏨 酒店管理后台</h2>
+        </div>
+        <nav class="sidebar-nav">
+            <a href=" ">首页</a >
+            <a href="/pages/admin/admin-room.html">客房管理</a >
+            <a href="/pages/admin/admin-booking.html">订单管理</a >
+            <a href="/pages/admin/admin-user.html" class="active">用户管理</a >
+        </nav>
+    </aside>
+
+    <!-- 主内容区 -->
+    <main class="admin-main">
+        <header class="admin-header">
+            <h1>用户管理</h1>
+            <div class="header-actions">
+                <span id="adminName">系统管理员</span>
+                <button class="btn btn-secondary" id="logoutBtn">退出</button>
+            </div>
+        </header>
+
+        <div class="content-section">
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="搜索用户名">
+                <button class="btn btn-primary" onclick="searchUsers()">搜索</button>
+            </div>
+
+            <table class="data-table">
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>用户名</th>
+                    <th>昵称</th>
+                    <th>手机号</th>
+                    <th>角色</th>
+                    <th>状态</th>
+                    <th>注册时间</th>
+                    <th>操作</th>
+                </tr>
+                </thead>
+                <tbody id="userList">
+                <tr>
+                    <td colspan="8" style="text-align:center;">加载中...</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+</div>
+
+<!-- 编辑用户弹窗 -->
+<div id="userModal" class="modal" style="display:none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>编辑用户</h3>
+            <span class="close" onclick="closeModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <form id="userForm">
+                <input type="hidden" id="userId">
+
+                <div class="form-group">
+                    <label>用户名</label>
+                    <input type="text" id="username" disabled>
+                </div>
+
+                <div class="form-group">
+                    <label>昵称</label>
+                    <input type="text" id="nickname">
+                </div>
+
+                <div class="form-group">
+                    <label>手机号</label>
+                    <input type="text" id="phone">
+                </div>
+
+                <div class="form-group">
+                    <label>角色</label>
+                    <select id="role">
+                        <option value="0">普通用户</option>
+                        <option value="1">管理员</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>状态</label>
+                    <select id="status">
+                        <option value="1">启用</option>
+                        <option value="0">禁用</option>
+                    </select>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">保存</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">取消</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    console.log('admin-user.js 开始执行');
+
+    // 检查管理员登录
+    function checkAdminLogin() {
+        const admin = JSON.parse(localStorage.getItem('admin') || 'null');
+        if (!admin || admin.role !== 1) {
+            alert('请先登录管理员账号');
+            location.href = '/pages/admin/admin-login.html';
+            return false;
+        }
+        document.getElementById('adminName').textContent = admin.nickname || admin.username;
+        return true;
+    }
+
+    // 退出登录
+    document.getElementById('logoutBtn').addEventListener('click', function() {
+        if (confirm('确定要退出吗?')) {
+            localStorage.removeItem('admin');
+            location.href = '/pages/admin/admin-login.html';
+        }
+    });
+
+    // 加载用户列表
+    function loadUsers() {
+        console.log('开始加载用户列表...');
+
+        const searchInput = document.getElementById('searchInput').value;
+
+        let url = 'http://localhost:8080/api/user/list?page=1&size=100';
+        if (searchInput) url += '&username=' + searchInput;
+
+        console.log('请求URL:', url);
+
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                console.log('返回数据:', data);
+                if (data.code === 200) {
+                    renderUsers(data.data.records);
+                } else {
+                    alert('加载失败: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('加载失败:', error);
+                alert('网络错误');
+            });
+    }
+
+    // 渲染用户列表
+    function renderUsers(users) {
+        console.log('渲染用户数量:', users ? users.length : 0);
+
+        const roleMap = { 0: '普通用户', 1: '管理员' };
+        const statusMap = { 0: '禁用', 1: '启用' };
+        const statusClass = { 0: 'danger', 1: 'success' };
+
+        if (!users || users.length === 0) {
+            document.getElementById('userList').innerHTML =
+                '<tr><td colspan="8" style="text-align:center;">暂无用户数据</td></tr>';
+            return;
+        }
+
+        const html = users.map(function(u) {
+            return '<tr>' +
+                '<td>' + u.id + '</td>' +
+                '<td>' + u.username + '</td>' +
+                '<td>' + (u.nickname || '-') + '</td>' +
+                '<td>' + (u.phone || '-') + '</td>' +
+                '<td><span class="badge badge-' + (u.role === 1 ? 'warning' : 'info') + '">' + roleMap[u.role] + '</span></td>' +
+                '<td><span class="badge badge-' + statusClass[u.status] + '">' + statusMap[u.status] + '</span></td>' +
+                '<td>' + (u.createTime || '-') + '</td>' +
+                '<td class="action-buttons">' +
+                '<button class="btn btn-primary btn-sm" onclick="editUser(' + u.id + ')">编辑</button> ' +
+                (u.status === 1 ?
+                    '<button class="btn btn-warning btn-sm" onclick="toggleUserStatus(' + u.id + ', 0)">禁用</button>' :
+                    '<button class="btn btn-success btn-sm" onclick="toggleUserStatus(' + u.id + ', 1)">启用</button>') +
+                '</td>' +
+                '</tr>';
+        }).join('');
+
+        document.getElementById('userList').innerHTML = html;
+    }
+
+    // 搜索
+    function searchUsers() {
+        loadUsers();
+    }
+
+    // 编辑用户
+    function editUser(id) {
+        fetch('http://localhost:8080/api/user/' + id)
+            .then(response => response.json())
+            .then(data => {
+                if (data.code === 200) {
+                    const user = data.data;
+                    document.getElementById('userId').value = user.id;
+                    document.getElementById('username').value = user.username;
+                    document.getElementById('nickname').value = user.nickname || '';
+                    document.getElementById('phone').value = user.phone || '';
+                    document.getElementById('role').value = user.role;
+                    document.getElementById('status').value = user.status;
+
+                    document.getElementById('userModal').style.display = 'block';
+                }
+            })
+            .catch(error => {
+                console.error('加载失败:', error);
+                alert('加载用户信息失败');
+            });
+    }
+
+    // 切换用户状态
+    function toggleUserStatus(id, newStatus) {
+        const action = newStatus === 1 ? '启用' : '禁用';
+        if (!confirm('确定要' + action + '这个用户吗?')) return;
+
+        fetch('http://localhost:8080/api/user/update', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                id: id,
+                status: newStatus
+            })
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.code === 200) {
+                    alert(action + '成功!');
+                    loadUsers();
+                } else {
+                    alert(action + '失败: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error(action + '失败:', error);
+                alert('网络错误');
+            });
+    }
+
+    // 关闭弹窗
+    function closeModal() {
+        document.getElementById('userModal').style.display = 'none';
+    }
+
+    // 提交表单
+    document.getElementById('userForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const userData = {
+            id: parseInt(document.getElementById('userId').value),
+            nickname: document.getElementById('nickname').value,
+            phone: document.getElementById('phone').value,
+            role: parseInt(document.getElementById('role').value),
+            status: parseInt(document.getElementById('status').value)
+        };
+
+        console.log('提交用户数据:', userData);
+
+        fetch('http://localhost:8080/api/user/update', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(userData)
+        })
+            .then(response => response.json())
+            .then(data => {
+                console.log('保存返回:', data);
+                if (data.code === 200) {
+                    alert('更新成功!');
+                    closeModal();
+                    loadUsers();
+                } else {
+                    alert('保存失败: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('保存失败:', error);
+                alert('网络错误');
+            });
+    });
+
+    // 页面加载
+    window.addEventListener('DOMContentLoaded', function() {
+        console.log('页面DOM加载完成');
+        if (checkAdminLogin()) {
+            loadUsers();
+        }
+    });
+</script>
+
+<style>
+    /* 弹窗样式 */
+    .modal {
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0,0,0,0.5);
+    }
+
+    .modal-content {
+        background-color: #fff;
+        margin: 10% auto;
+        padding: 0;
+        border-radius: 8px;
+        width: 500px;
+        max-width: 90%;
+    }
+
+    .modal-header {
+        padding: 20px;
+        border-bottom: 1px solid #eee;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .modal-header h3 {
+        margin: 0;
+    }
+
+    .close {
+        font-size: 28px;
+        font-weight: bold;
+        cursor: pointer;
+        color: #999;
+    }
+
+    .close:hover {
+        color: #333;
+    }
+
+    .modal-body {
+        padding: 20px;
+    }
+
+    .form-group {
+        margin-bottom: 15px;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: 500;
+    }
+
+    .form-group input,
+    .form-group select {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+
+    .form-group input:disabled {
+        background: #f5f5f5;
+        cursor: not-allowed;
+    }
+
+    .form-actions {
+        margin-top: 20px;
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+    }
+
+    .badge {
+        padding: 2px 8px;
+        border-radius: 3px;
+        font-size: 12px;
+    }
+
+    .badge-info { background: #409eff; color: white; }
+    .badge-warning { background: #e6a23c; color: white; }
+    .badge-success { background: #67c23a; color: white; }
+    .badge-danger { background: #f56c6c; color: white; }
+
+    .btn-warning {
+        background: #e6a23c;
+        color: white;
+    }
+
+    .btn-warning:hover {
+        background: #ebb563;
+    }
+
+    .btn-success {
+        background: #67c23a;
+        color: white;
+    }
+
+    .btn-success:hover {
+        background: #85ce61;
+    }
+</style>
+</body>
+</html>
