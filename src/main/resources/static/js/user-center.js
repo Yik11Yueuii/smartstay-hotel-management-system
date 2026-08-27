@@ -32,14 +32,22 @@ function loadProfile() {
 document.getElementById('profileForm')?.addEventListener('submit', function(e) {
     e.preventDefault();
 
-    const user = JSON.parse(localStorage.getItem('user') || 'null');
-    user.nickname = document.getElementById('nickname').value;
-    user.phone = document.getElementById('phone').value;
-
-    // TODO: 替换为真实API
-    localStorage.setItem('user', JSON.stringify(user));
-    alert('保存成功!');
-    checkLogin();
+    fetch('/api/user/me', {
+        method: 'PUT',
+        headers: authenticatedHeaders(true),
+        body: JSON.stringify({
+            nickname: document.getElementById('nickname').value.trim(),
+            phone: document.getElementById('phone').value.trim()
+        })
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.code !== 200) throw new Error(data.message || '保存失败');
+            localStorage.setItem('user', JSON.stringify(data.data));
+            alert('保存成功!');
+            checkLogin();
+        })
+        .catch(error => alert(error.message));
 });
 
 // 修改密码
@@ -55,9 +63,18 @@ document.getElementById('passwordForm')?.addEventListener('submit', function(e) 
         return;
     }
 
-    // TODO: 替换为真实API
-    alert('密码修改成功! (模拟)');
-    this.reset();
+    fetch('/api/user/me/password', {
+        method: 'PUT',
+        headers: authenticatedHeaders(true),
+        body: JSON.stringify({ oldPassword, newPassword })
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.code !== 200) throw new Error(data.message || '密码修改失败');
+            alert('密码修改成功!');
+            this.reset();
+        })
+        .catch(error => alert(error.message));
 });
 
 // 加载预订列表

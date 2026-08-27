@@ -12,6 +12,7 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -56,6 +57,45 @@ class UserServiceImplTest {
         service.login("admin", "admin123");
 
         verify(service).updateById(any(User.class));
+    }
+
+    @Test
+    void updateProfileChangesOnlyAllowedProfileFields() {
+        User user = enabledUser(passwordEncoder.encode("admin123"));
+        UserServiceImpl service = spy(new UserServiceImpl(passwordEncoder, mock(AuthTokenService.class)));
+        doReturn(user).when(service).getById(1L);
+        doReturn(true).when(service).updateById(any(User.class));
+
+        User updated = service.updateProfile(1L, "新昵称", "13800000000");
+
+        assertEquals("新昵称", updated.getNickname());
+        assertEquals("13800000000", updated.getPhone());
+        assertEquals(1, updated.getRole());
+        assertNull(updated.getPassword());
+    }
+
+    @Test
+    void changePasswordVerifiesOldPasswordAndHashesNewPassword() {
+        User user = enabledUser(passwordEncoder.encode("admin123"));
+        UserServiceImpl service = spy(new UserServiceImpl(passwordEncoder, mock(AuthTokenService.class)));
+        doReturn(user).when(service).getById(1L);
+        doReturn(true).when(service).updateById(any(User.class));
+
+        service.changePassword(1L, "admin123", "newPassword123");
+
+        assertTrue(passwordEncoder.matches("newPassword123", user.getPassword()));
+    }
+
+    @Test
+    void updateProfileRejectsInvalidPhone() {
+        User user = enabledUser(passwordEncoder.encode("admin123"));
+        UserServiceImpl service = spy(new UserServiceImpl(passwordEncoder, mock(AuthTokenService.class)));
+        doReturn(user).when(service).getById(1L);
+
+        RuntimeException exception = assertThrows(RuntimeException.class,
+                () -> service.updateProfile(1L, "昵称", "123"));
+
+        assertEquals("手机号格式不正确", exception.getMessage());
     }
 
     @SuppressWarnings("unchecked")

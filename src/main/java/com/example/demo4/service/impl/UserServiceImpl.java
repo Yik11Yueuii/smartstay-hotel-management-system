@@ -82,4 +82,39 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         user.setStatus(1);
         this.save(user);
     }
+
+    @Override
+    public User updateProfile(Long userId, String nickname, String phone) {
+        User user = this.getById(userId);
+        if (user == null) {
+            throw new RuntimeException("用户不存在");
+        }
+        if (StrUtil.isNotBlank(phone) && !phone.matches("^1[3-9]\\d{9}$")) {
+            throw new RuntimeException("手机号格式不正确");
+        }
+        user.setNickname(StrUtil.trim(nickname));
+        user.setPhone(StrUtil.trim(phone));
+        this.updateById(user);
+        user.setPassword(null);
+        return user;
+    }
+
+    @Override
+    public void changePassword(Long userId, String oldPassword, String newPassword) {
+        if (StrUtil.isBlank(oldPassword) || StrUtil.isBlank(newPassword)) {
+            throw new RuntimeException("原密码和新密码不能为空");
+        }
+        if (newPassword.length() < 6 || newPassword.length() > 20) {
+            throw new RuntimeException("新密码长度应为6-20个字符");
+        }
+        User user = this.getById(userId);
+        if (user == null) {
+            throw new RuntimeException("用户不存在");
+        }
+        if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
+            throw new RuntimeException("原密码错误");
+        }
+        user.setPassword(passwordEncoder.encode(newPassword));
+        this.updateById(user);
+    }
 }

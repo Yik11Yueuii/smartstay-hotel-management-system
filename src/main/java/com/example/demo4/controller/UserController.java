@@ -8,7 +8,6 @@ import com.example.demo4.config.AdminOnly;
 import com.example.demo4.entity.User;
 import com.example.demo4.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -20,9 +19,6 @@ public class UserController {
 
     @Autowired
     private UserService userService;
-
-    @Autowired
-    private PasswordEncoder passwordEncoder;
 
     /**
      * 用户登录
@@ -64,6 +60,30 @@ public class UserController {
         return Result.success(user);
     }
 
+    @PutMapping("/me")
+    public Result<User> updateCurrentUser(
+            @RequestAttribute(AuthInterceptor.AUTH_USER_ID) Long userId,
+            @RequestBody Map<String, String> params) {
+        try {
+            return Result.success(userService.updateProfile(
+                    userId, params.get("nickname"), params.get("phone")));
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    @PutMapping("/me/password")
+    public Result<String> updateCurrentUserPassword(
+            @RequestAttribute(AuthInterceptor.AUTH_USER_ID) Long userId,
+            @RequestBody Map<String, String> params) {
+        try {
+            userService.changePassword(userId, params.get("oldPassword"), params.get("newPassword"));
+            return Result.success("密码修改成功");
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
     /**
      * 获取用户信息
      */
@@ -103,17 +123,7 @@ public class UserController {
             String oldPassword = params.get("oldPassword").toString();
             String newPassword = params.get("newPassword").toString();
 
-            User user = userService.getById(userId);
-            if (user == null) {
-                return Result.error("用户不存在");
-            }
-
-            if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
-                return Result.error("原密码错误");
-            }
-
-            user.setPassword(passwordEncoder.encode(newPassword));
-            userService.updateById(user);
+            userService.changePassword(userId, oldPassword, newPassword);
             return Result.success("密码修改成功");
         } catch (Exception e) {
             return Result.error(e.getMessage());
