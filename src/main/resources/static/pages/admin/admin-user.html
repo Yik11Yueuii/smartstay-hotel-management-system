@@ -181,7 +181,9 @@
             return;
         }
 
+        const currentAdmin = JSON.parse(localStorage.getItem('admin') || 'null');
         const html = users.map(function(u) {
+            const isCurrentAdmin = currentAdmin && currentAdmin.id === u.id;
             return '<tr>' +
                 '<td>' + u.id + '</td>' +
                 '<td>' + u.username + '</td>' +
@@ -191,10 +193,11 @@
                 '<td><span class="badge badge-' + statusClass[u.status] + '">' + statusMap[u.status] + '</span></td>' +
                 '<td>' + (u.createTime || '-') + '</td>' +
                 '<td class="action-buttons">' +
+                (isCurrentAdmin ? '<span class="badge badge-info">当前账号</span>' :
                 '<button class="btn btn-primary btn-sm" onclick="editUser(' + u.id + ')">编辑</button> ' +
                 (u.status === 1 ?
                     '<button class="btn btn-warning btn-sm" onclick="toggleUserStatus(' + u.id + ', 0)">禁用</button>' :
-                    '<button class="btn btn-success btn-sm" onclick="toggleUserStatus(' + u.id + ', 1)">启用</button>') +
+                    '<button class="btn btn-success btn-sm" onclick="toggleUserStatus(' + u.id + ', 1)">启用</button>')) +
                 '</td>' +
                 '</tr>';
         }).join('');

@@ -104,7 +104,17 @@ public class UserController {
      */
     @PutMapping("/update")
     @AdminOnly
-    public Result<String> update(@RequestBody User user) {
+    public Result<String> update(
+            @RequestAttribute(AuthInterceptor.AUTH_USER_ID) Long authenticatedUserId,
+            @RequestBody User user) {
+        if (user.getId() == null) {
+            return Result.error("用户ID不能为空");
+        }
+        if (authenticatedUserId.equals(user.getId())
+                && (Integer.valueOf(0).equals(user.getStatus())
+                || (user.getRole() != null && !Integer.valueOf(1).equals(user.getRole())))) {
+            return Result.error("不能禁用当前管理员或取消其管理员角色");
+        }
         user.setPassword(null);
         userService.updateById(user);
         return Result.success("更新成功");

@@ -36,8 +36,9 @@
                 <input type="text" id="searchInput" placeholder="搜索客房名称或房间号">
                 <select id="typeFilter">
                     <option value="">全部类型</option>
-                    <option value="单人间">单人间</option>
-                    <option value="双人间">双人间</option>
+                    <option value="大床房">大床房</option>
+                    <option value="双床房">双床房</option>
+                    <option value="家庭房">家庭房</option>
                     <option value="套房">套房</option>
                 </select>
                 <button class="btn btn-primary" onclick="searchRooms()">搜索</button>
@@ -92,8 +93,9 @@
                     <label>客房类型 *</label>
                     <select id="roomType" required>
                         <option value="">请选择</option>
-                        <option value="单人间">单人间</option>
-                        <option value="双人间">双人间</option>
+                        <option value="大床房">大床房</option>
+                        <option value="双床房">双床房</option>
+                        <option value="家庭房">家庭房</option>
                         <option value="套房">套房</option>
                     </select>
                 </div>
@@ -107,9 +109,13 @@
                     <label>床型 *</label>
                     <select id="bedType" required>
                         <option value="">请选择</option>
-                        <option value="单人床">单人床</option>
-                        <option value="双人床">双人床</option>
-                        <option value="大床">大床</option>
+                        <option value="1.5米大床">1.5米大床</option>
+                        <option value="1.8米大床">1.8米大床</option>
+                        <option value="2米大床">2米大床</option>
+                        <option value="1.2米双床">1.2米双床</option>
+                        <option value="1.35米双床">1.35米双床</option>
+                        <option value="大床+单人床">大床+单人床</option>
+                        <option value="大床+双床">大床+双床</option>
                     </select>
                 </div>
 
