@@ -64,7 +64,15 @@
             <version>5.8.22</version>
         </dependency>
 
-        <!-- Password hashing without enabling Spring Security's default web filter chain. -->
+        <!-- Stateless JWT authentication and role-based API authorization. -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-config</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-crypto</artifactId>

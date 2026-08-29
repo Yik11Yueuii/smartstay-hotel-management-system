@@ -3,7 +3,6 @@ package com.example.demo4.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.demo4.common.Result;
-import com.example.demo4.config.AdminOnly;
 import com.example.demo4.entity.Notice;
 import com.example.demo4.service.NoticeService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,7 +20,6 @@ public class NoticeController {
      * 分页查询公告列表
      */
     @GetMapping("/list")
-    @AdminOnly
     public Result<Page<Notice>> list(
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "10") Integer size,
@@ -73,7 +71,6 @@ public class NoticeController {
      * 添加公告
      */
     @PostMapping("/add")
-    @AdminOnly
     public Result<String> add(@RequestBody Notice notice) {
         noticeService.save(notice);
         return Result.success("添加成功");
@@ -83,7 +80,6 @@ public class NoticeController {
      * 更新公告
      */
     @PutMapping("/update")
-    @AdminOnly
     public Result<String> update(@RequestBody Notice notice) {
         noticeService.updateById(notice);
         return Result.success("更新成功");
@@ -93,7 +89,6 @@ public class NoticeController {
      * 删除公告
      */
     @DeleteMapping("/{id}")
-    @AdminOnly
     public Result<String> delete(@PathVariable Long id) {
         noticeService.removeById(id);
         return Result.success("删除成功");

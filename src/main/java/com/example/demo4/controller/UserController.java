@@ -3,8 +3,7 @@ package com.example.demo4.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.demo4.common.Result;
-import com.example.demo4.config.AuthInterceptor;
-import com.example.demo4.config.AdminOnly;
+import com.example.demo4.config.JwtAuthenticationFilter;
 import com.example.demo4.entity.User;
 import com.example.demo4.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -52,7 +51,7 @@ public class UserController {
      * 获取用户信息
      */
     @GetMapping("/me")
-    public Result<User> getCurrentUser(@RequestAttribute(AuthInterceptor.AUTH_USER_ID) Long userId) {
+    public Result<User> getCurrentUser(@RequestAttribute(JwtAuthenticationFilter.AUTH_USER_ID) Long userId) {
         User user = userService.getById(userId);
         if (user == null) {
             return Result.error(404, "用户不存在");
@@ -63,7 +62,7 @@ public class UserController {
 
     @PutMapping("/me")
     public Result<User> updateCurrentUser(
-            @RequestAttribute(AuthInterceptor.AUTH_USER_ID) Long userId,
+            @RequestAttribute(JwtAuthenticationFilter.AUTH_USER_ID) Long userId,
             @RequestBody Map<String, String> params) {
         try {
             return Result.success(userService.updateProfile(
@@ -75,7 +74,7 @@ public class UserController {
 
     @PutMapping("/me/password")
     public Result<String> updateCurrentUserPassword(
-            @RequestAttribute(AuthInterceptor.AUTH_USER_ID) Long userId,
+            @RequestAttribute(JwtAuthenticationFilter.AUTH_USER_ID) Long userId,
             @RequestBody Map<String, String> params) {
         try {
             userService.changePassword(userId, params.get("oldPassword"), params.get("newPassword"));
@@ -89,7 +88,6 @@ public class UserController {
      * 获取用户信息
      */
     @GetMapping("/{id}")
-    @AdminOnly
     public Result<User> getById(@PathVariable Long id) {
         User user = userService.getById(id);
         if (user == null) {
@@ -103,9 +101,8 @@ public class UserController {
      * 更新用户信息
      */
     @PutMapping("/update")
-    @AdminOnly
     public Result<String> update(
-            @RequestAttribute(AuthInterceptor.AUTH_USER_ID) Long authenticatedUserId,
+            @RequestAttribute(JwtAuthenticationFilter.AUTH_USER_ID) Long authenticatedUserId,
             @RequestBody User user) {
         if (user.getId() == null) {
             return Result.error("用户ID不能为空");
@@ -125,7 +122,7 @@ public class UserController {
      */
     @PutMapping("/password")
     public Result<String> updatePassword(
-            @RequestAttribute(AuthInterceptor.AUTH_USER_ID) Long authenticatedUserId,
+            @RequestAttribute(JwtAuthenticationFilter.AUTH_USER_ID) Long authenticatedUserId,
             @RequestBody Map<String, Object> params) {
         try {
             Long userId = Long.valueOf(params.get("userId").toString());
@@ -146,7 +143,6 @@ public class UserController {
      * 分页查询用户列表
      */
     @GetMapping("/list")
-    @AdminOnly
     public Result<Page<User>> list(
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "10") Integer size,

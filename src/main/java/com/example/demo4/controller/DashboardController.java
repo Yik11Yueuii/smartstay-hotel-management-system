@@ -3,7 +3,6 @@ package com.example.demo4.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.demo4.common.Result;
-import com.example.demo4.config.AdminOnly;
 import com.example.demo4.entity.Booking;
 import com.example.demo4.entity.Room;
 import com.example.demo4.entity.User;
@@ -39,7 +38,6 @@ public class DashboardController {
     }
 
     @GetMapping("/summary")
-    @AdminOnly
     public Result<Map<String, Object>> summary() {
         Map<String, Object> result = new HashMap<>();
         result.put("totalBookings", bookingService.count());

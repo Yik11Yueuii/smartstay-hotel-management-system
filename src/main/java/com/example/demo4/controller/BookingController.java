@@ -3,8 +3,7 @@ package com.example.demo4.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.demo4.common.Result;
-import com.example.demo4.config.AdminOnly;
-import com.example.demo4.config.AuthInterceptor;
+import com.example.demo4.config.JwtAuthenticationFilter;
 import com.example.demo4.entity.Booking;
 import com.example.demo4.service.BookingService;
 import com.example.demo4.exception.BusinessException;
@@ -28,8 +27,8 @@ public class BookingController {
      */
     @GetMapping("/list")
     public Result<Page<Booking>> list(
-            @RequestAttribute(AuthInterceptor.AUTH_USER_ID) Long authenticatedUserId,
-            @RequestAttribute(AuthInterceptor.AUTH_USER_ROLE) Integer authenticatedRole,
+            @RequestAttribute(JwtAuthenticationFilter.AUTH_USER_ID) Long authenticatedUserId,
+            @RequestAttribute(JwtAuthenticationFilter.AUTH_USER_ROLE) Integer authenticatedRole,
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "10") Integer size,
             @RequestParam(required = false) String orderNo,
@@ -64,8 +63,8 @@ public class BookingController {
      */
     @GetMapping("/{id}")
     public Result<Booking> getById(
-            @RequestAttribute(AuthInterceptor.AUTH_USER_ID) Long authenticatedUserId,
-            @RequestAttribute(AuthInterceptor.AUTH_USER_ROLE) Integer authenticatedRole,
+            @RequestAttribute(JwtAuthenticationFilter.AUTH_USER_ID) Long authenticatedUserId,
+            @RequestAttribute(JwtAuthenticationFilter.AUTH_USER_ROLE) Integer authenticatedRole,
             @PathVariable Long id) {
         Booking booking = bookingService.getById(id);
         if (booking == null) {
@@ -83,7 +82,7 @@ public class BookingController {
      */
     @PostMapping("/create")
     public Result<String> create(
-            @RequestAttribute(AuthInterceptor.AUTH_USER_ID) Long authenticatedUserId,
+            @RequestAttribute(JwtAuthenticationFilter.AUTH_USER_ID) Long authenticatedUserId,
             @RequestBody Booking booking) {
         bookingService.createBooking(booking, authenticatedUserId);
         return Result.success("预订成功");
@@ -93,7 +92,6 @@ public class BookingController {
      * 确认订单
      */
     @PutMapping("/confirm/{id}")
-    @AdminOnly
     public Result<String> confirm(@PathVariable Long id) {
         bookingService.confirmBooking(id);
         return Result.success("确认成功");
@@ -104,8 +102,8 @@ public class BookingController {
      */
     @PutMapping("/cancel/{id}")
     public Result<String> cancel(
-            @RequestAttribute(AuthInterceptor.AUTH_USER_ID) Long authenticatedUserId,
-            @RequestAttribute(AuthInterceptor.AUTH_USER_ROLE) Integer authenticatedRole,
+            @RequestAttribute(JwtAuthenticationFilter.AUTH_USER_ID) Long authenticatedUserId,
+            @RequestAttribute(JwtAuthenticationFilter.AUTH_USER_ROLE) Integer authenticatedRole,
             @PathVariable Long id) {
         bookingService.cancelBooking(id, authenticatedUserId, authenticatedRole);
         return Result.success("取消成功");
@@ -115,7 +113,6 @@ public class BookingController {
      * 办理入住
      */
     @PostMapping("/checkin")
-    @AdminOnly
     public Result<String> checkIn(@RequestBody Map<String, Object> params) {
         Long bookingId = Long.valueOf(required(params, "bookingId"));
         String guestName = required(params, "guestName");
@@ -129,7 +126,6 @@ public class BookingController {
      * 办理退房
      */
     @PostMapping("/checkout")
-    @AdminOnly
     public Result<String> checkOut(@RequestBody Map<String, Object> params) {
         Long bookingId = Long.valueOf(required(params, "bookingId"));
         BigDecimal depositReturn = new BigDecimal(required(params, "depositReturn"));
