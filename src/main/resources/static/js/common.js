@@ -20,11 +20,10 @@ function checkLogin() {
 document.addEventListener('DOMContentLoaded', function() {
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
-        logoutBtn.addEventListener('click', function() {
-            if (confirm('确定要退出登录吗?')) {
+        logoutBtn.addEventListener('click', async function() {
+            if (await AppDialog.confirm('确定要退出登录吗?')) {
                 localStorage.removeItem('user');
                 localStorage.removeItem('token');
-                alert('已退出登录');
                 location.href = '/pages/user/index.html';
             }
         });

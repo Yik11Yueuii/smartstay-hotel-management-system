@@ -134,8 +134,8 @@ function renderUserBookings(bookings) {
     document.getElementById('bookingList').innerHTML = html || '<p>暂无预订记录</p>';
 }
 // 取消预订
-function cancelBooking(id) {
-    if (confirm('确定要取消此预订吗?')) {
+async function cancelBooking(id) {
+    if (await AppDialog.confirm('确定要取消此预订吗?', '取消预订')) {
         fetch(`/api/booking/cancel/${id}`, {
             method: 'PUT',
             headers: authenticatedHeaders(false)

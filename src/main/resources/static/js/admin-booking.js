@@ -10,8 +10,8 @@ function checkAdminLogin() {
 }
 
 // 退出登录
-document.getElementById('logoutBtn')?.addEventListener('click', function() {
-    if (confirm('确定要退出吗?')) {
+document.getElementById('logoutBtn')?.addEventListener('click', async function() {
+    if (await AppDialog.confirm('确定要退出吗?', '退出后台')) {
         localStorage.removeItem('admin');
         location.href = '/pages/admin/admin-login.html';
     }
@@ -68,8 +68,8 @@ function renderBookings(bookings) {
 }
 
 // 确认订单
-function confirmBooking(id) {
-    if (confirm('确定要确认此订单吗?')) {
+async function confirmBooking(id) {
+    if (await AppDialog.confirm('确定要确认此订单吗?', '确认订单')) {
         fetch(`/api/booking/confirm/${id}`, { method: 'PUT' })
             .then(response => response.json())
             .then(data => {
@@ -88,14 +88,14 @@ function confirmBooking(id) {
 }
 
 // 办理入住
-function checkIn(id) {
-    const guestName = prompt('请输入客人姓名:');
+async function checkIn(id) {
+    const guestName = await AppDialog.prompt('请输入客人姓名:', '', '办理入住');
     if (!guestName) return;
 
-    const guestIdCard = prompt('请输入身份证号:');
+    const guestIdCard = await AppDialog.prompt('请输入身份证号:', '', '办理入住');
     if (!guestIdCard) return;
 
-    const deposit = prompt('请输入押金金额:', '200');
+    const deposit = await AppDialog.prompt('请输入押金金额:', '200', '办理入住');
     if (!deposit) return;
 
     fetch('/api/booking/checkin', {
@@ -119,11 +119,11 @@ function checkIn(id) {
 }
 
 // 办理退房
-function checkOut(id) {
-    const depositReturn = prompt('请输入退还押金:', '200');
+async function checkOut(id) {
+    const depositReturn = await AppDialog.prompt('请输入退还押金:', '200', '办理退房');
     if (depositReturn === null) return;
 
-    const additionalCharges = prompt('请输入额外费用:', '0');
+    const additionalCharges = await AppDialog.prompt('请输入额外费用:', '0', '办理退房');
     if (additionalCharges === null) return;
 
     fetch('/api/booking/checkout', {

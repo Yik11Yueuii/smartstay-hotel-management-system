@@ -84,6 +84,7 @@
     </div>
 </div>
 
+<script src="/js/dialog.js"></script>
 <script>
     // 检查管理员登录
     function checkAdminLogin() {
@@ -97,8 +98,8 @@
     }
 
     // 退出登录
-    document.getElementById('logoutBtn')?.addEventListener('click', function() {
-        if (confirm('确定要退出吗?')) {
+    document.getElementById('logoutBtn')?.addEventListener('click', async function() {
+        if (await AppDialog.confirm('确定要退出吗?', '退出后台')) {
             localStorage.removeItem('admin');
             localStorage.removeItem('token');
             location.href = '/pages/admin/admin-login.html';

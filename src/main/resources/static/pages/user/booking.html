@@ -87,6 +87,7 @@
     </div>
 </main>
 
+<script src="/js/dialog.js"></script>
 <script>
     let currentRoom = null;
 
@@ -233,8 +234,8 @@
     }
 
     // 退出登录
-    document.getElementById('logoutBtn').addEventListener('click', function() {
-        if (confirm('确定要退出吗?')) {
+    document.getElementById('logoutBtn').addEventListener('click', async function() {
+        if (await AppDialog.confirm('确定要退出吗?', '退出登录')) {
             localStorage.removeItem('user');
             localStorage.removeItem('token');
             window.location.href = '/pages/user/login.html';

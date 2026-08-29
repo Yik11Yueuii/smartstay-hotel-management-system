@@ -159,6 +159,7 @@
     </div>
 </div>
 
+<script src="/js/dialog.js"></script>
 <script>
     function authHeaders(json) {
         const headers = { 'Authorization': 'Bearer ' + (localStorage.getItem('token') || '') };
@@ -181,8 +182,8 @@
     }
 
     // 退出登录
-    document.getElementById('logoutBtn').addEventListener('click', function() {
-        if (confirm('确定要退出吗?')) {
+    document.getElementById('logoutBtn').addEventListener('click', async function() {
+        if (await AppDialog.confirm('确定要退出吗?', '退出后台')) {
             localStorage.removeItem('admin');
             location.href = '/pages/admin/admin-login.html';
         }
@@ -296,8 +297,8 @@
     }
 
     // 删除客房
-    function deleteRoom(id) {
-        if (!confirm('确定要删除这个客房吗?')) return;
+    async function deleteRoom(id) {
+        if (!await AppDialog.confirm('删除后将无法恢复，确定要删除这个客房吗?', '删除客房')) return;
 
         fetch('/api/room/' + id, {
             method: 'DELETE',

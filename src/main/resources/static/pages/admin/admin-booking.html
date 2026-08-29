@@ -69,6 +69,7 @@
     </main>
 </div>
 
+<script src="/js/dialog.js"></script>
 <script>
     function authHeaders(json) {
         const headers = { 'Authorization': 'Bearer ' + (localStorage.getItem('token') || '') };
@@ -91,8 +92,8 @@
     }
 
     // 退出登录
-    document.getElementById('logoutBtn').addEventListener('click', function() {
-        if (confirm('确定要退出吗?')) {
+    document.getElementById('logoutBtn').addEventListener('click', async function() {
+        if (await AppDialog.confirm('确定要退出吗?', '退出后台')) {
             localStorage.removeItem('admin');
             location.href = '/pages/admin/admin-login.html';
         }
@@ -190,8 +191,8 @@
     }
 
     // 确认订单
-    function confirmBooking(id) {
-        if (!confirm('确定要确认此订单吗?')) return;
+    async function confirmBooking(id) {
+        if (!await AppDialog.confirm('确定要确认此订单吗?', '确认订单')) return;
 
         fetch('/api/booking/confirm/' + id, {
             method: 'PUT',
@@ -213,14 +214,14 @@
     }
 
     // 办理入住
-    function showCheckIn(id) {
-        const guestName = prompt('请输入客人姓名:');
+    async function showCheckIn(id) {
+        const guestName = await AppDialog.prompt('请输入客人姓名:', '', '办理入住');
         if (!guestName) return;
 
-        const guestIdCard = prompt('请输入身份证号:');
+        const guestIdCard = await AppDialog.prompt('请输入身份证号:', '', '办理入住');
         if (!guestIdCard) return;
 
-        const deposit = prompt('请输入押金金额:', '200');
+        const deposit = await AppDialog.prompt('请输入押金金额:', '200', '办理入住');
         if (!deposit) return;
 
         fetch('/api/booking/checkin', {
@@ -249,11 +250,11 @@
     }
 
     // 办理退房
-    function showCheckOut(id) {
-        const depositReturn = prompt('请输入退还押金:', '200');
+    async function showCheckOut(id) {
+        const depositReturn = await AppDialog.prompt('请输入退还押金:', '200', '办理退房');
         if (depositReturn === null) return;
 
-        const additionalCharges = prompt('请输入额外费用:', '0');
+        const additionalCharges = await AppDialog.prompt('请输入额外费用:', '0', '办理退房');
         if (additionalCharges === null) return;
 
         fetch('/api/booking/checkout', {
