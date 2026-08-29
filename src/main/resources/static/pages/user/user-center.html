@@ -15,7 +15,8 @@
         .sidebar {
             width: 200px;
             background: white;
-            border-radius: 10px;
+            border: 1px solid var(--border);
+            border-radius: 16px;
             padding: 20px;
             height: fit-content;
         }
@@ -25,19 +26,20 @@
         .sidebar-menu li {
             padding: 12px;
             cursor: pointer;
-            border-radius: 5px;
+            border-radius: 10px;
             margin-bottom: 5px;
             transition: all 0.3s;
         }
         .sidebar-menu li:hover,
         .sidebar-menu li.active {
-            background: #667eea;
+            background: var(--primary);
             color: white;
         }
         .main-content {
             flex: 1;
             background: white;
-            border-radius: 10px;
+            border: 1px solid var(--border);
+            border-radius: 16px;
             padding: 30px;
         }
         .tab-content {
@@ -47,9 +49,9 @@
             display: block;
         }
         .order-item {
-            border: 1px solid #f0f0f0;
+            border: 1px solid var(--border);
             padding: 15px;
-            border-radius: 8px;
+            border-radius: 12px;
             margin-bottom: 15px;
         }
         .order-header {
@@ -57,7 +59,7 @@
             justify-content: space-between;
             margin-bottom: 10px;
             padding-bottom: 10px;
-            border-bottom: 1px solid #f0f0f0;
+            border-bottom: 1px solid var(--border);
         }
     </style>
 </head>
