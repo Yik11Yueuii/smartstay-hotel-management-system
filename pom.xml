@@ -8,7 +8,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>2.7.14</version>
+        <version>2.7.18</version>
     </parent>
 
     <groupId>com.example</groupId>
@@ -16,7 +16,9 @@
     <version>1.0.0</version>
 
     <properties>
-        <java.version>1.8</java.version>
+        <java.version>21</java.version>
+        <maven.compiler.release>21</maven.compiler.release>
+        <lombok.version>1.18.32</lombok.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     </properties>
