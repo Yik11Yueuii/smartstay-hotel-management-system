@@ -9,6 +9,8 @@ import com.example.demo4.entity.Room;
 import com.example.demo4.mapper.BookingMapper;
 import com.example.demo4.service.BookingService;
 import com.example.demo4.service.RoomService;
+import com.example.demo4.exception.BusinessException;
+import com.example.demo4.exception.ErrorCode;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,10 +35,10 @@ public class BookingServiceImpl extends ServiceImpl<BookingMapper, Booking> impl
 
         Room room = roomService.getById(booking.getRoomId());
         if (room == null) {
-            throw new RuntimeException("客房不存在");
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "客房不存在");
         }
         if (room.getStatus() == null || room.getStatus() == 3 || room.getStatus() == 4) {
-            throw new RuntimeException("客房当前不可预订");
+            throw new BusinessException(ErrorCode.STATE_CONFLICT, "客房当前不可预订");
         }
 
         LambdaQueryWrapper<Booking> conflict = new LambdaQueryWrapper<>();
@@ -45,7 +47,7 @@ public class BookingServiceImpl extends ServiceImpl<BookingMapper, Booking> impl
                 .lt(Booking::getCheckInDate, booking.getCheckOutDate())
                 .gt(Booking::getCheckOutDate, booking.getCheckInDate());
         if (this.count(conflict) > 0) {
-            throw new RuntimeException("所选日期内客房已被预订");
+            throw new BusinessException(ErrorCode.STATE_CONFLICT, "所选日期内客房已被预订");
         }
 
         long days = ChronoUnit.DAYS.between(booking.getCheckInDate(), booking.getCheckOutDate());
@@ -62,7 +64,7 @@ public class BookingServiceImpl extends ServiceImpl<BookingMapper, Booking> impl
         booking.setTotalAmount(unitPrice.multiply(BigDecimal.valueOf(days)));
         booking.setStatus(0);
         if (!this.save(booking)) {
-            throw new RuntimeException("预订创建失败");
+            throw new BusinessException(ErrorCode.INTERNAL_ERROR, "预订创建失败");
         }
     }
 
@@ -71,14 +73,14 @@ public class BookingServiceImpl extends ServiceImpl<BookingMapper, Booking> impl
     public void confirmBooking(Long id) {
         Booking booking = this.getById(id);
         if (booking == null) {
-            throw new RuntimeException("订单不存在");
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "订单不存在");
         }
         if (booking.getStatus() != 0) {
-            throw new RuntimeException("只有待确认订单可以确认");
+            throw new BusinessException(ErrorCode.STATE_CONFLICT, "只有待确认订单可以确认");
         }
         Room room = requireRoom(booking.getRoomId());
         if (room.getStatus() == 4) {
-            throw new RuntimeException("维护中的客房不能确认预订");
+            throw new BusinessException(ErrorCode.STATE_CONFLICT, "维护中的客房不能确认预订");
         }
         booking.setStatus(1);
         this.updateById(booking);
@@ -93,13 +95,13 @@ public class BookingServiceImpl extends ServiceImpl<BookingMapper, Booking> impl
     public void cancelBooking(Long id, Long authenticatedUserId, Integer authenticatedRole) {
         Booking booking = this.getById(id);
         if (booking == null) {
-            throw new RuntimeException("订单不存在");
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "订单不存在");
         }
         if (authenticatedRole != 1 && !authenticatedUserId.equals(booking.getUserId())) {
-            throw new RuntimeException("不能取消其他用户的订单");
+            throw new BusinessException(ErrorCode.FORBIDDEN, "不能取消其他用户的订单");
         }
         if (booking.getStatus() != 0 && booking.getStatus() != 1) {
-            throw new RuntimeException("当前订单状态不能取消");
+            throw new BusinessException(ErrorCode.STATE_CONFLICT, "当前订单状态不能取消");
         }
         booking.setStatus(2);
         this.updateById(booking);
@@ -111,24 +113,24 @@ public class BookingServiceImpl extends ServiceImpl<BookingMapper, Booking> impl
     public void checkIn(Long id, String guestName, String guestIdCard, BigDecimal deposit) {
         Booking booking = requireBooking(id);
         if (booking.getStatus() != 1) {
-            throw new RuntimeException("只有已确认订单可以办理入住");
+            throw new BusinessException(ErrorCode.STATE_CONFLICT, "只有已确认订单可以办理入住");
         }
         if (StrUtil.isBlank(guestName) || StrUtil.isBlank(guestIdCard)) {
-            throw new RuntimeException("入住人姓名和证件号不能为空");
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, "入住人姓名和证件号不能为空");
         }
         if (deposit == null || deposit.signum() < 0) {
-            throw new RuntimeException("押金不能为负数");
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, "押金不能为负数");
         }
         LocalDate today = LocalDate.now();
         if (today.isBefore(booking.getCheckInDate()) || !today.isBefore(booking.getCheckOutDate())) {
-            throw new RuntimeException("当前日期不在订单入住期间");
+            throw new BusinessException(ErrorCode.STATE_CONFLICT, "当前日期不在订单入住期间");
         }
         Room room = requireRoom(booking.getRoomId());
         if (room.getStatus() == 4) {
-            throw new RuntimeException("维护中的客房不能办理入住");
+            throw new BusinessException(ErrorCode.STATE_CONFLICT, "维护中的客房不能办理入住");
         }
         if (room.getStatus() == 3) {
-            throw new RuntimeException("客房当前已有住客");
+            throw new BusinessException(ErrorCode.STATE_CONFLICT, "客房当前已有住客");
         }
 
         booking.setGuestName(guestName);
@@ -147,17 +149,17 @@ public class BookingServiceImpl extends ServiceImpl<BookingMapper, Booking> impl
     public void checkOut(Long id, BigDecimal depositReturn, BigDecimal additionalCharges, String remark) {
         Booking booking = requireBooking(id);
         if (booking.getStatus() != 3) {
-            throw new RuntimeException("只有已入住订单可以办理退房");
+            throw new BusinessException(ErrorCode.STATE_CONFLICT, "只有已入住订单可以办理退房");
         }
         if (depositReturn == null || depositReturn.signum() < 0) {
-            throw new RuntimeException("退还押金不能为负数");
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, "退还押金不能为负数");
         }
         BigDecimal deposit = booking.getDeposit() == null ? BigDecimal.ZERO : booking.getDeposit();
         if (depositReturn.compareTo(deposit) > 0) {
-            throw new RuntimeException("退还押金不能超过已收押金");
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, "退还押金不能超过已收押金");
         }
         if (additionalCharges == null || additionalCharges.signum() < 0) {
-            throw new RuntimeException("额外费用不能为负数");
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, "额外费用不能为负数");
         }
 
         booking.setDepositReturn(depositReturn);
@@ -171,25 +173,25 @@ public class BookingServiceImpl extends ServiceImpl<BookingMapper, Booking> impl
 
     private void validateBookingRequest(Booking booking) {
         if (booking.getRoomId() == null) {
-            throw new RuntimeException("请选择客房");
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, "请选择客房");
         }
         LocalDate checkIn = booking.getCheckInDate();
         LocalDate checkOut = booking.getCheckOutDate();
         if (checkIn == null || checkOut == null || !checkOut.isAfter(checkIn)) {
-            throw new RuntimeException("退房日期必须晚于入住日期");
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, "退房日期必须晚于入住日期");
         }
         if (checkIn.isBefore(LocalDate.now())) {
-            throw new RuntimeException("入住日期不能早于今天");
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, "入住日期不能早于今天");
         }
         if (StrUtil.isBlank(booking.getContactName()) || StrUtil.isBlank(booking.getContactPhone())) {
-            throw new RuntimeException("联系人和联系电话不能为空");
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, "联系人和联系电话不能为空");
         }
     }
 
     private Booking requireBooking(Long id) {
         Booking booking = this.getById(id);
         if (booking == null) {
-            throw new RuntimeException("订单不存在");
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "订单不存在");
         }
         return booking;
     }
@@ -197,7 +199,7 @@ public class BookingServiceImpl extends ServiceImpl<BookingMapper, Booking> impl
     private Room requireRoom(Long roomId) {
         Room room = roomService.getById(roomId);
         if (room == null) {
-            throw new RuntimeException("客房不存在");
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "客房不存在");
         }
         return room;
     }

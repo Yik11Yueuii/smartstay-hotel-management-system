@@ -5,6 +5,7 @@ import lombok.Data;
 @Data
 public class Result<T> {
     private Integer code;
+    private String errorCode;
     private String message;
     private T data;
 
@@ -31,6 +32,12 @@ public class Result<T> {
         Result<T> r = new Result<>();
         r.setCode(code);
         r.setMessage(message);
+        return r;
+    }
+
+    public static <T> Result<T> error(Integer code, String errorCode, String message) {
+        Result<T> r = error(code, message);
+        r.setErrorCode(errorCode);
         return r;
     }
 }

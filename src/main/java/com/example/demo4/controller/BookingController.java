@@ -7,6 +7,8 @@ import com.example.demo4.config.AdminOnly;
 import com.example.demo4.config.AuthInterceptor;
 import com.example.demo4.entity.Booking;
 import com.example.demo4.service.BookingService;
+import com.example.demo4.exception.BusinessException;
+import com.example.demo4.exception.ErrorCode;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -67,11 +69,11 @@ public class BookingController {
             @PathVariable Long id) {
         Booking booking = bookingService.getById(id);
         if (booking == null) {
-            return Result.error(404, "订单不存在");
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "订单不存在");
         }
         if (authenticatedRole != 1
                 && !authenticatedUserId.equals(booking.getUserId())) {
-            return Result.error("不能查看其他用户的订单");
+            throw new BusinessException(ErrorCode.FORBIDDEN, "不能查看其他用户的订单");
         }
         return Result.success(booking);
     }
@@ -83,12 +85,8 @@ public class BookingController {
     public Result<String> create(
             @RequestAttribute(AuthInterceptor.AUTH_USER_ID) Long authenticatedUserId,
             @RequestBody Booking booking) {
-        try {
-            bookingService.createBooking(booking, authenticatedUserId);
-            return Result.success("预订成功");
-        } catch (Exception e) {
-            return Result.error(e.getMessage());
-        }
+        bookingService.createBooking(booking, authenticatedUserId);
+        return Result.success("预订成功");
     }
 
     /**
@@ -97,12 +95,8 @@ public class BookingController {
     @PutMapping("/confirm/{id}")
     @AdminOnly
     public Result<String> confirm(@PathVariable Long id) {
-        try {
-            bookingService.confirmBooking(id);
-            return Result.success("确认成功");
-        } catch (Exception e) {
-            return Result.error(e.getMessage());
-        }
+        bookingService.confirmBooking(id);
+        return Result.success("确认成功");
     }
 
     /**
@@ -113,12 +107,8 @@ public class BookingController {
             @RequestAttribute(AuthInterceptor.AUTH_USER_ID) Long authenticatedUserId,
             @RequestAttribute(AuthInterceptor.AUTH_USER_ROLE) Integer authenticatedRole,
             @PathVariable Long id) {
-        try {
-            bookingService.cancelBooking(id, authenticatedUserId, authenticatedRole);
-            return Result.success("取消成功");
-        } catch (Exception e) {
-            return Result.error(e.getMessage());
-        }
+        bookingService.cancelBooking(id, authenticatedUserId, authenticatedRole);
+        return Result.success("取消成功");
     }
 
     /**
@@ -127,16 +117,12 @@ public class BookingController {
     @PostMapping("/checkin")
     @AdminOnly
     public Result<String> checkIn(@RequestBody Map<String, Object> params) {
-        try {
-            Long bookingId = Long.valueOf(params.get("bookingId").toString());
-            String guestName = params.get("guestName").toString();
-            String guestIdCard = params.get("guestIdCard").toString();
-            BigDecimal deposit = new BigDecimal(params.get("deposit").toString());
-            bookingService.checkIn(bookingId, guestName, guestIdCard, deposit);
-            return Result.success("入住成功");
-        } catch (Exception e) {
-            return Result.error(e.getMessage());
-        }
+        Long bookingId = Long.valueOf(required(params, "bookingId"));
+        String guestName = required(params, "guestName");
+        String guestIdCard = required(params, "guestIdCard");
+        BigDecimal deposit = new BigDecimal(required(params, "deposit"));
+        bookingService.checkIn(bookingId, guestName, guestIdCard, deposit);
+        return Result.success("入住成功");
     }
 
     /**
@@ -145,16 +131,19 @@ public class BookingController {
     @PostMapping("/checkout")
     @AdminOnly
     public Result<String> checkOut(@RequestBody Map<String, Object> params) {
-        try {
-            Long bookingId = Long.valueOf(params.get("bookingId").toString());
-            BigDecimal depositReturn = new BigDecimal(params.get("depositReturn").toString());
-            BigDecimal additionalCharges = new BigDecimal(params.get("additionalCharges").toString());
-            String remark = params.get("remark") != null ? params.get("remark").toString() : "";
+        Long bookingId = Long.valueOf(required(params, "bookingId"));
+        BigDecimal depositReturn = new BigDecimal(required(params, "depositReturn"));
+        BigDecimal additionalCharges = new BigDecimal(required(params, "additionalCharges"));
+        String remark = params.get("remark") != null ? params.get("remark").toString() : "";
+        bookingService.checkOut(bookingId, depositReturn, additionalCharges, remark);
+        return Result.success("退房成功");
+    }
 
-            bookingService.checkOut(bookingId, depositReturn, additionalCharges, remark);
-            return Result.success("退房成功");
-        } catch (Exception e) {
-            return Result.error(e.getMessage());
+    private String required(Map<String, Object> params, String key) {
+        Object value = params.get(key);
+        if (value == null || value.toString().trim().isEmpty()) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, "缺少必填参数: " + key);
         }
+        return value.toString();
     }
 }
