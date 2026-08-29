@@ -7,6 +7,8 @@ import com.example.demo4.entity.User;
 import com.example.demo4.mapper.UserMapper;
 import com.example.demo4.service.UserService;
 import com.example.demo4.service.AuthTokenService;
+import com.example.demo4.exception.BusinessException;
+import com.example.demo4.exception.ErrorCode;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import java.util.HashMap;
@@ -26,7 +28,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     @Override
     public Map<String, Object> login(String username, String password) {
         if (StrUtil.isBlank(username) || StrUtil.isBlank(password)) {
-            throw new RuntimeException("用户名或密码不能为空");
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, "用户名或密码不能为空");
         }
 
         LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
@@ -34,7 +36,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         User user = this.getOne(wrapper);
 
         if (user == null) {
-            throw new RuntimeException("用户不存在");
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "用户不存在");
         }
 
         String storedPassword = user.getPassword();
@@ -44,11 +46,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
                 : password.equals(storedPassword);
 
         if (!passwordMatches) {
-            throw new RuntimeException("密码错误");
+            throw new BusinessException(ErrorCode.UNAUTHORIZED, "用户名或密码错误");
         }
 
         if (user.getStatus() == 0) {
-            throw new RuntimeException("账号已被禁用");
+            throw new BusinessException(ErrorCode.FORBIDDEN, "账号已被禁用");
         }
 
         // Upgrade legacy plaintext passwords after a successful login.
@@ -68,13 +70,13 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     @Override
     public void register(User user) {
         if (StrUtil.isBlank(user.getUsername()) || StrUtil.isBlank(user.getPassword())) {
-            throw new RuntimeException("用户名或密码不能为空");
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, "用户名或密码不能为空");
         }
 
         LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(User::getUsername, user.getUsername());
         if (this.count(wrapper) > 0) {
-            throw new RuntimeException("用户名已存在");
+            throw new BusinessException(ErrorCode.STATE_CONFLICT, "用户名已存在");
         }
 
         user.setPassword(passwordEncoder.encode(user.getPassword()));
@@ -87,10 +89,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     public User updateProfile(Long userId, String nickname, String phone) {
         User user = this.getById(userId);
         if (user == null) {
-            throw new RuntimeException("用户不存在");
+            throw new BusinessException(ErrorCode.UNAUTHORIZED, "用户名或密码错误");
         }
         if (StrUtil.isNotBlank(phone) && !phone.matches("^1[3-9]\\d{9}$")) {
-            throw new RuntimeException("手机号格式不正确");
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, "手机号格式不正确");
         }
         user.setNickname(StrUtil.trim(nickname));
         user.setPhone(StrUtil.trim(phone));
@@ -102,17 +104,17 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     @Override
     public void changePassword(Long userId, String oldPassword, String newPassword) {
         if (StrUtil.isBlank(oldPassword) || StrUtil.isBlank(newPassword)) {
-            throw new RuntimeException("原密码和新密码不能为空");
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, "原密码和新密码不能为空");
         }
         if (newPassword.length() < 6 || newPassword.length() > 20) {
-            throw new RuntimeException("新密码长度应为6-20个字符");
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, "新密码长度应为6-20个字符");
         }
         User user = this.getById(userId);
         if (user == null) {
-            throw new RuntimeException("用户不存在");
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "用户不存在");
         }
         if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
-            throw new RuntimeException("原密码错误");
+            throw new BusinessException(ErrorCode.UNAUTHORIZED, "原密码错误");
         }
         user.setPassword(passwordEncoder.encode(newPassword));
         this.updateById(user);

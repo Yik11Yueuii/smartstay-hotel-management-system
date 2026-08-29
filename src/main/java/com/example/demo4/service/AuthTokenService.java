@@ -6,12 +6,16 @@ import com.example.demo4.common.AuthPrincipal;
 import com.example.demo4.entity.User;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
 @Service
 public class AuthTokenService {
+    private static final Logger log = LoggerFactory.getLogger(AuthTokenService.class);
+    private static final String LOCAL_DEFAULT_SECRET = "hotel-management-local-secret-change-me";
 
     private final byte[] secret;
     private final int expireHours;
@@ -20,6 +24,9 @@ public class AuthTokenService {
                             @Value("${auth.token.expire-hours}") int expireHours) {
         this.secret = secret.getBytes(StandardCharsets.UTF_8);
         this.expireHours = expireHours;
+        if (LOCAL_DEFAULT_SECRET.equals(secret)) {
+            log.warn("正在使用本地默认 JWT 密钥；部署环境必须设置 AUTH_TOKEN_SECRET");
+        }
     }
 
     public String createToken(User user) {

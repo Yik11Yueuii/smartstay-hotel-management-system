@@ -5,6 +5,8 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.demo4.common.Result;
 import com.example.demo4.entity.Notice;
 import com.example.demo4.service.NoticeService;
+import com.example.demo4.exception.BusinessException;
+import com.example.demo4.exception.ErrorCode;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -62,7 +64,7 @@ public class NoticeController {
     public Result<Notice> getById(@PathVariable Long id) {
         Notice notice = noticeService.getById(id);
         if (notice == null) {
-            return Result.error(404, "公告不存在");
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "公告不存在");
         }
         return Result.success(notice);
     }

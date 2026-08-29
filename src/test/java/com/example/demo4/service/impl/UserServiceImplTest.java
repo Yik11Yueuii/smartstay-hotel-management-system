@@ -3,6 +3,9 @@ package com.example.demo4.service.impl;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.example.demo4.entity.User;
 import com.example.demo4.service.AuthTokenService;
+import com.example.demo4.common.AuthPrincipal;
+import com.example.demo4.exception.BusinessException;
+import com.example.demo4.exception.ErrorCode;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -40,12 +43,27 @@ class UserServiceImplTest {
         User user = enabledUser(passwordEncoder.encode("admin123"));
         UserServiceImpl service = serviceReturning(user);
 
-        RuntimeException exception = assertThrows(
-                RuntimeException.class,
+        BusinessException exception = assertThrows(
+                BusinessException.class,
                 () -> service.login("admin", "wrong-password")
         );
 
-        assertEquals("密码错误", exception.getMessage());
+        assertEquals(ErrorCode.UNAUTHORIZED, exception.getErrorCode());
+        assertEquals("用户名或密码错误", exception.getMessage());
+    }
+
+    @Test
+    void loginReturnsTokenThatRestoresUserAndRole() {
+        AuthTokenService tokenService = new AuthTokenService("test-secret-with-at-least-32-characters", 1);
+        User user = enabledUser(passwordEncoder.encode("admin123"));
+        UserServiceImpl service = spy(new UserServiceImpl(passwordEncoder, tokenService));
+        doReturn(user).when(service).getOne(any(Wrapper.class));
+
+        String token = (String) service.login("admin", "admin123").get("token");
+        AuthPrincipal principal = tokenService.verify(token);
+
+        assertEquals(1L, principal.getUserId());
+        assertEquals(1, principal.getRole());
     }
 
     @Test

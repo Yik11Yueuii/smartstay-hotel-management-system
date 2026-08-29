@@ -5,6 +5,8 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.demo4.common.Result;
 import com.example.demo4.entity.Room;
 import com.example.demo4.service.RoomService;
+import com.example.demo4.exception.BusinessException;
+import com.example.demo4.exception.ErrorCode;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -73,7 +75,7 @@ public class RoomController {
     public Result<Room> getById(@PathVariable Long id) {
         Room room = roomService.getById(id);
         if (room == null) {
-            return Result.error(404, "客房不存在");
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "客房不存在");
         }
         return Result.success(room);
     }
@@ -83,10 +85,7 @@ public class RoomController {
      */
     @PostMapping("/add")
     public Result<String> add(@RequestBody Room room) {
-        try {
-            System.out.println("接收到客房数据: " + room);
-
-            // 设置默认值
+        // 设置默认值
             if (room.getStatus() == null) {
                 room.setStatus(1); // 默认可预订
             }
@@ -94,18 +93,10 @@ public class RoomController {
                 room.setIsPromotion(0); // 默认不促销
             }
 
-            boolean success = roomService.save(room);
-            System.out.println("保存结果: " + success);
-
-            if (success) {
-                return Result.success("添加成功");
-            } else {
-                return Result.error("添加失败");
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-            return Result.error("添加失败: " + e.getMessage());
+        if (!roomService.save(room)) {
+            throw new BusinessException(ErrorCode.INTERNAL_ERROR, "客房添加失败");
         }
+        return Result.success("添加成功");
     }
 
 

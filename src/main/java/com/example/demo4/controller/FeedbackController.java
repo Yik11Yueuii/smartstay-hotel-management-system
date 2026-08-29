@@ -6,6 +6,8 @@ import com.example.demo4.common.Result;
 import com.example.demo4.config.JwtAuthenticationFilter;
 import com.example.demo4.entity.Feedback;
 import com.example.demo4.service.FeedbackService;
+import com.example.demo4.exception.BusinessException;
+import com.example.demo4.exception.ErrorCode;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -60,11 +62,11 @@ public class FeedbackController {
             @PathVariable Long id) {
         Feedback feedback = feedbackService.getById(id);
         if (feedback == null) {
-            return Result.error(404, "反馈不存在");
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "反馈不存在");
         }
         if (authenticatedRole != 1
                 && !authenticatedUserId.equals(feedback.getUserId())) {
-            return Result.error("不能查看其他用户的反馈");
+            throw new BusinessException(ErrorCode.FORBIDDEN, "不能查看其他用户的反馈");
         }
         return Result.success(feedback);
     }
@@ -87,23 +89,21 @@ public class FeedbackController {
      */
     @PutMapping("/reply")
     public Result<String> reply(@RequestBody Map<String, Object> params) {
-        try {
-            Long id = Long.valueOf(params.get("id").toString());
+        Object rawId = params.get("id");
+        if (rawId == null) throw new BusinessException(ErrorCode.INVALID_REQUEST, "反馈ID不能为空");
+        Long id = Long.valueOf(rawId.toString());
             String reply = params.get("reply").toString();
 
             Feedback feedback = feedbackService.getById(id);
             if (feedback == null) {
-                return Result.error("反馈不存在");
+                throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "反馈不存在");
             }
 
             feedback.setReply(reply);
             feedback.setStatus(1);
             feedbackService.updateById(feedback);
 
-            return Result.success("回复成功");
-        } catch (Exception e) {
-            return Result.error(e.getMessage());
-        }
+        return Result.success("回复成功");
     }
 
     /**

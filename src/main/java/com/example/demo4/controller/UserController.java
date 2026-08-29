@@ -6,6 +6,8 @@ import com.example.demo4.common.Result;
 import com.example.demo4.config.JwtAuthenticationFilter;
 import com.example.demo4.entity.User;
 import com.example.demo4.service.UserService;
+import com.example.demo4.exception.BusinessException;
+import com.example.demo4.exception.ErrorCode;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -24,14 +26,7 @@ public class UserController {
      */
     @PostMapping("/login")
     public Result<Map<String, Object>> login(@RequestBody Map<String, String> params) {
-        try {
-            String username = params.get("username");
-            String password = params.get("password");
-            Map<String, Object> result = userService.login(username, password);
-            return Result.success(result);
-        } catch (Exception e) {
-            return Result.error(e.getMessage());
-        }
+        return Result.success(userService.login(params.get("username"), params.get("password")));
     }
 
     /**
@@ -39,12 +34,8 @@ public class UserController {
      */
     @PostMapping("/register")
     public Result<String> register(@RequestBody User user) {
-        try {
-            userService.register(user);
-            return Result.success("注册成功");
-        } catch (Exception e) {
-            return Result.error(e.getMessage());
-        }
+        userService.register(user);
+        return Result.success("注册成功");
     }
 
     /**
@@ -54,7 +45,7 @@ public class UserController {
     public Result<User> getCurrentUser(@RequestAttribute(JwtAuthenticationFilter.AUTH_USER_ID) Long userId) {
         User user = userService.getById(userId);
         if (user == null) {
-            return Result.error(404, "用户不存在");
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "用户不存在");
         }
         user.setPassword(null);
         return Result.success(user);
@@ -64,24 +55,15 @@ public class UserController {
     public Result<User> updateCurrentUser(
             @RequestAttribute(JwtAuthenticationFilter.AUTH_USER_ID) Long userId,
             @RequestBody Map<String, String> params) {
-        try {
-            return Result.success(userService.updateProfile(
-                    userId, params.get("nickname"), params.get("phone")));
-        } catch (Exception e) {
-            return Result.error(e.getMessage());
-        }
+        return Result.success(userService.updateProfile(userId, params.get("nickname"), params.get("phone")));
     }
 
     @PutMapping("/me/password")
     public Result<String> updateCurrentUserPassword(
             @RequestAttribute(JwtAuthenticationFilter.AUTH_USER_ID) Long userId,
             @RequestBody Map<String, String> params) {
-        try {
-            userService.changePassword(userId, params.get("oldPassword"), params.get("newPassword"));
-            return Result.success("密码修改成功");
-        } catch (Exception e) {
-            return Result.error(e.getMessage());
-        }
+        userService.changePassword(userId, params.get("oldPassword"), params.get("newPassword"));
+        return Result.success("密码修改成功");
     }
 
     /**
@@ -91,7 +73,7 @@ public class UserController {
     public Result<User> getById(@PathVariable Long id) {
         User user = userService.getById(id);
         if (user == null) {
-            return Result.error(404, "用户不存在");
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "用户不存在");
         }
         user.setPassword(null);
         return Result.success(user);
@@ -105,12 +87,12 @@ public class UserController {
             @RequestAttribute(JwtAuthenticationFilter.AUTH_USER_ID) Long authenticatedUserId,
             @RequestBody User user) {
         if (user.getId() == null) {
-            return Result.error("用户ID不能为空");
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, "用户ID不能为空");
         }
         if (authenticatedUserId.equals(user.getId())
                 && (Integer.valueOf(0).equals(user.getStatus())
                 || (user.getRole() != null && !Integer.valueOf(1).equals(user.getRole())))) {
-            return Result.error("不能禁用当前管理员或取消其管理员角色");
+            throw new BusinessException(ErrorCode.FORBIDDEN, "不能禁用当前管理员或取消其管理员角色");
         }
         user.setPassword(null);
         userService.updateById(user);
@@ -124,19 +106,17 @@ public class UserController {
     public Result<String> updatePassword(
             @RequestAttribute(JwtAuthenticationFilter.AUTH_USER_ID) Long authenticatedUserId,
             @RequestBody Map<String, Object> params) {
-        try {
-            Long userId = Long.valueOf(params.get("userId").toString());
+        Object rawUserId = params.get("userId");
+        if (rawUserId == null) throw new BusinessException(ErrorCode.INVALID_REQUEST, "用户ID不能为空");
+        Long userId = Long.valueOf(rawUserId.toString());
             if (!authenticatedUserId.equals(userId)) {
-                return Result.error("不能修改其他用户的密码");
+                throw new BusinessException(ErrorCode.FORBIDDEN, "不能修改其他用户的密码");
             }
             String oldPassword = params.get("oldPassword").toString();
             String newPassword = params.get("newPassword").toString();
 
             userService.changePassword(userId, oldPassword, newPassword);
-            return Result.success("密码修改成功");
-        } catch (Exception e) {
-            return Result.error(e.getMessage());
-        }
+        return Result.success("密码修改成功");
     }
 
     /**

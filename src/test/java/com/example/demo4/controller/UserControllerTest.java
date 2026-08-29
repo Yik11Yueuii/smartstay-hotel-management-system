@@ -1,10 +1,12 @@
 package com.example.demo4.controller;
 
-import com.example.demo4.common.Result;
 import com.example.demo4.entity.User;
+import com.example.demo4.exception.BusinessException;
+import com.example.demo4.exception.ErrorCode;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class UserControllerTest {
 
@@ -15,10 +17,11 @@ class UserControllerTest {
         update.setId(1L);
         update.setStatus(0);
 
-        Result<String> result = controller.update(1L, update);
+        BusinessException exception = assertThrows(BusinessException.class,
+                () -> controller.update(1L, update));
 
-        assertEquals(400, result.getCode());
-        assertEquals("不能禁用当前管理员或取消其管理员角色", result.getMessage());
+        assertEquals(ErrorCode.FORBIDDEN, exception.getErrorCode());
+        assertEquals("不能禁用当前管理员或取消其管理员角色", exception.getMessage());
     }
 
     @Test
@@ -28,9 +31,10 @@ class UserControllerTest {
         update.setId(1L);
         update.setRole(0);
 
-        Result<String> result = controller.update(1L, update);
+        BusinessException exception = assertThrows(BusinessException.class,
+                () -> controller.update(1L, update));
 
-        assertEquals(400, result.getCode());
-        assertEquals("不能禁用当前管理员或取消其管理员角色", result.getMessage());
+        assertEquals(ErrorCode.FORBIDDEN, exception.getErrorCode());
+        assertEquals("不能禁用当前管理员或取消其管理员角色", exception.getMessage());
     }
 }
