@@ -101,7 +101,7 @@ class BookingServiceImplTest {
         RuntimeException exception = assertThrows(RuntimeException.class,
                 () -> service.confirmBooking(10L));
 
-        assertEquals("只有待确认订单可以确认", exception.getMessage());
+        assertEquals("订单不能从“已取消”变更为“已确认”", exception.getMessage());
     }
 
     private Booking validBooking() {

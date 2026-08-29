@@ -5,6 +5,7 @@ import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.demo4.entity.Booking;
+import com.example.demo4.common.BookingStatus;
 import com.example.demo4.entity.Room;
 import com.example.demo4.mapper.BookingMapper;
 import com.example.demo4.service.BookingService;
@@ -43,7 +44,8 @@ public class BookingServiceImpl extends ServiceImpl<BookingMapper, Booking> impl
 
         LambdaQueryWrapper<Booking> conflict = new LambdaQueryWrapper<>();
         conflict.eq(Booking::getRoomId, room.getId())
-                .in(Booking::getStatus, 0, 1, 3)
+                .in(Booking::getStatus, BookingStatus.PENDING.getCode(),
+                        BookingStatus.CONFIRMED.getCode(), BookingStatus.CHECKED_IN.getCode())
                 .lt(Booking::getCheckInDate, booking.getCheckOutDate())
                 .gt(Booking::getCheckOutDate, booking.getCheckInDate());
         if (this.count(conflict) > 0) {
@@ -62,7 +64,7 @@ public class BookingServiceImpl extends ServiceImpl<BookingMapper, Booking> impl
         booking.setDays(Math.toIntExact(days));
         booking.setPrice(unitPrice);
         booking.setTotalAmount(unitPrice.multiply(BigDecimal.valueOf(days)));
-        booking.setStatus(0);
+        booking.setStatus(BookingStatus.PENDING.getCode());
         if (!this.save(booking)) {
             throw new BusinessException(ErrorCode.INTERNAL_ERROR, "预订创建失败");
         }
@@ -75,14 +77,12 @@ public class BookingServiceImpl extends ServiceImpl<BookingMapper, Booking> impl
         if (booking == null) {
             throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "订单不存在");
         }
-        if (booking.getStatus() != 0) {
-            throw new BusinessException(ErrorCode.STATE_CONFLICT, "只有待确认订单可以确认");
-        }
+        BookingStatus.fromCode(booking.getStatus()).requireTransitionTo(BookingStatus.CONFIRMED);
         Room room = requireRoom(booking.getRoomId());
         if (room.getStatus() == 4) {
             throw new BusinessException(ErrorCode.STATE_CONFLICT, "维护中的客房不能确认预订");
         }
-        booking.setStatus(1);
+        booking.setStatus(BookingStatus.CONFIRMED.getCode());
         this.updateById(booking);
         if (room.getStatus() == 1) {
             room.setStatus(2);
@@ -100,10 +100,8 @@ public class BookingServiceImpl extends ServiceImpl<BookingMapper, Booking> impl
         if (authenticatedRole != 1 && !authenticatedUserId.equals(booking.getUserId())) {
             throw new BusinessException(ErrorCode.FORBIDDEN, "不能取消其他用户的订单");
         }
-        if (booking.getStatus() != 0 && booking.getStatus() != 1) {
-            throw new BusinessException(ErrorCode.STATE_CONFLICT, "当前订单状态不能取消");
-        }
-        booking.setStatus(2);
+        BookingStatus.fromCode(booking.getStatus()).requireTransitionTo(BookingStatus.CANCELLED);
+        booking.setStatus(BookingStatus.CANCELLED.getCode());
         this.updateById(booking);
         refreshRoomStatus(booking.getRoomId());
     }
@@ -112,9 +110,7 @@ public class BookingServiceImpl extends ServiceImpl<BookingMapper, Booking> impl
     @Transactional
     public void checkIn(Long id, String guestName, String guestIdCard, BigDecimal deposit) {
         Booking booking = requireBooking(id);
-        if (booking.getStatus() != 1) {
-            throw new BusinessException(ErrorCode.STATE_CONFLICT, "只有已确认订单可以办理入住");
-        }
+        BookingStatus.fromCode(booking.getStatus()).requireTransitionTo(BookingStatus.CHECKED_IN);
         if (StrUtil.isBlank(guestName) || StrUtil.isBlank(guestIdCard)) {
             throw new BusinessException(ErrorCode.INVALID_REQUEST, "入住人姓名和证件号不能为空");
         }
@@ -137,7 +133,7 @@ public class BookingServiceImpl extends ServiceImpl<BookingMapper, Booking> impl
         booking.setGuestIdCard(guestIdCard);
         booking.setDeposit(deposit);
         booking.setActualCheckInTime(LocalDateTime.now());
-        booking.setStatus(3);
+        booking.setStatus(BookingStatus.CHECKED_IN.getCode());
         this.updateById(booking);
 
         room.setStatus(3);
@@ -148,9 +144,7 @@ public class BookingServiceImpl extends ServiceImpl<BookingMapper, Booking> impl
     @Transactional
     public void checkOut(Long id, BigDecimal depositReturn, BigDecimal additionalCharges, String remark) {
         Booking booking = requireBooking(id);
-        if (booking.getStatus() != 3) {
-            throw new BusinessException(ErrorCode.STATE_CONFLICT, "只有已入住订单可以办理退房");
-        }
+        BookingStatus.fromCode(booking.getStatus()).requireTransitionTo(BookingStatus.CHECKED_OUT);
         if (depositReturn == null || depositReturn.signum() < 0) {
             throw new BusinessException(ErrorCode.INVALID_REQUEST, "退还押金不能为负数");
         }
@@ -166,7 +160,7 @@ public class BookingServiceImpl extends ServiceImpl<BookingMapper, Booking> impl
         booking.setAdditionalCharges(additionalCharges);
         booking.setRemark(remark == null ? "" : remark);
         booking.setActualCheckOutTime(LocalDateTime.now());
-        booking.setStatus(4);
+        booking.setStatus(BookingStatus.CHECKED_OUT.getCode());
         this.updateById(booking);
         refreshRoomStatus(booking.getRoomId());
     }
@@ -210,9 +204,9 @@ public class BookingServiceImpl extends ServiceImpl<BookingMapper, Booking> impl
             return;
         }
         LambdaQueryWrapper<Booking> checkedIn = new LambdaQueryWrapper<>();
-        checkedIn.eq(Booking::getRoomId, roomId).eq(Booking::getStatus, 3);
+        checkedIn.eq(Booking::getRoomId, roomId).eq(Booking::getStatus, BookingStatus.CHECKED_IN.getCode());
         LambdaQueryWrapper<Booking> confirmed = new LambdaQueryWrapper<>();
-        confirmed.eq(Booking::getRoomId, roomId).eq(Booking::getStatus, 1);
+        confirmed.eq(Booking::getRoomId, roomId).eq(Booking::getStatus, BookingStatus.CONFIRMED.getCode());
         room.setStatus(this.count(checkedIn) > 0 ? 3 : this.count(confirmed) > 0 ? 2 : 1);
         roomService.updateById(room);
     }
