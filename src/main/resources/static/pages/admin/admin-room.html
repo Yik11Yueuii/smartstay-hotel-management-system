@@ -17,6 +17,7 @@
             <a href="/pages/admin/admin-dashboard.html">首页</a>
             <a href="/pages/admin/admin-room.html" class="active">客房管理</a>
             <a href="/pages/admin/admin-booking.html">订单管理</a>
+            <a href="/pages/admin/admin-operations.html">运营中心</a>
             <a href="/pages/admin/admin-user.html">用户管理</a>
         </nav>
     </aside>
@@ -136,6 +137,7 @@
                         <option value="2">已预订</option>
                         <option value="3">已入住</option>
                         <option value="4">维护中</option>
+                        <option value="5">待清洁</option>
                     </select>
                 </div>
 
@@ -222,8 +224,8 @@
     function renderRooms(rooms) {
         console.log('渲染客房数量:', rooms ? rooms.length : 0);
 
-        const statusMap = { 1: '可预订', 2: '已预订', 3: '已入住', 4: '维护中' };
-        const statusClass = { 1: 'success', 2: 'warning', 3: 'info', 4: 'danger' };
+        const statusMap = { 1: '可预订', 2: '已预订', 3: '已入住', 4: '维护中', 5: '待清洁' };
+        const statusClass = { 1: 'success', 2: 'warning', 3: 'info', 4: 'danger', 5: 'warning' };
 
         if (!rooms || rooms.length === 0) {
             document.getElementById('roomList').innerHTML =

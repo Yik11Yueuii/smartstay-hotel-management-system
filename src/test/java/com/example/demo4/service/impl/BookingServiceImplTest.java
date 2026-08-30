@@ -7,7 +7,9 @@ import com.example.demo4.service.RoomService;
 import com.example.demo4.mapper.RoomMapper;
 import com.example.demo4.pricing.PricingQuote;
 import com.example.demo4.pricing.PricingService;
+import com.example.demo4.operations.event.BookingCheckedOutEvent;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -20,6 +22,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class BookingServiceImplTest {
@@ -29,7 +32,8 @@ class BookingServiceImplTest {
         RoomService roomService = mock(RoomService.class);
         RoomMapper roomMapper = mock(RoomMapper.class);
         when(roomMapper.selectByIdForUpdate(8L)).thenReturn(availableRoom());
-        BookingServiceImpl service = spy(new BookingServiceImpl(roomService, roomMapper, pricingService()));
+        BookingServiceImpl service = spy(new BookingServiceImpl(
+                roomService, roomMapper, pricingService(), mock(ApplicationEventPublisher.class)));
         doReturn(null).when(service).getOne(any(Wrapper.class), eq(false));
         doReturn(0L).when(service).count(any(Wrapper.class));
         doReturn(true).when(service).save(any(Booking.class));
@@ -56,7 +60,8 @@ class BookingServiceImplTest {
         RoomService roomService = mock(RoomService.class);
         RoomMapper roomMapper = mock(RoomMapper.class);
         when(roomMapper.selectByIdForUpdate(8L)).thenReturn(availableRoom());
-        BookingServiceImpl service = spy(new BookingServiceImpl(roomService, roomMapper, pricingService()));
+        BookingServiceImpl service = spy(new BookingServiceImpl(
+                roomService, roomMapper, pricingService(), mock(ApplicationEventPublisher.class)));
         doReturn(null).when(service).getOne(any(Wrapper.class), eq(false));
         doReturn(1L).when(service).count(any(Wrapper.class));
 
@@ -78,7 +83,8 @@ class BookingServiceImplTest {
         booking.setCheckInDate(LocalDate.now());
         booking.setCheckOutDate(LocalDate.now().plusDays(1));
         BookingServiceImpl service = spy(new BookingServiceImpl(
-                roomService, mock(RoomMapper.class), mock(PricingService.class)));
+                roomService, mock(RoomMapper.class), mock(PricingService.class),
+                mock(ApplicationEventPublisher.class)));
         doReturn(booking).when(service).getById(10L);
         doReturn(true).when(service).updateById(any(Booking.class));
 
@@ -96,7 +102,8 @@ class BookingServiceImplTest {
         booking.setStatus(3);
         booking.setDeposit(new BigDecimal("200.00"));
         BookingServiceImpl service = spy(new BookingServiceImpl(
-                roomService, mock(RoomMapper.class), mock(PricingService.class)));
+                roomService, mock(RoomMapper.class), mock(PricingService.class),
+                mock(ApplicationEventPublisher.class)));
         doReturn(booking).when(service).getById(10L);
 
         RuntimeException exception = assertThrows(RuntimeException.class,
@@ -110,13 +117,33 @@ class BookingServiceImplTest {
         Booking booking = validBooking();
         booking.setStatus(2);
         BookingServiceImpl service = spy(new BookingServiceImpl(
-                mock(RoomService.class), mock(RoomMapper.class), mock(PricingService.class)));
+                mock(RoomService.class), mock(RoomMapper.class), mock(PricingService.class),
+                mock(ApplicationEventPublisher.class)));
         doReturn(booking).when(service).getById(10L);
 
         RuntimeException exception = assertThrows(RuntimeException.class,
                 () -> service.confirmBooking(10L));
 
         assertEquals("订单不能从“已取消”变更为“已确认”", exception.getMessage());
+    }
+
+    @Test
+    void checkOutPublishesCleaningWorkflowEvent() {
+        Booking booking = validBooking();
+        booking.setId(10L);
+        booking.setRoomNumber("0808");
+        booking.setStatus(3);
+        booking.setDeposit(new BigDecimal("200.00"));
+        ApplicationEventPublisher eventPublisher = mock(ApplicationEventPublisher.class);
+        BookingServiceImpl service = spy(new BookingServiceImpl(
+                mock(RoomService.class), mock(RoomMapper.class), mock(PricingService.class), eventPublisher));
+        doReturn(booking).when(service).getById(10L);
+        doReturn(true).when(service).updateById(any(Booking.class));
+
+        service.checkOut(10L, new BigDecimal("200.00"), BigDecimal.ZERO, "正常退房");
+
+        assertEquals(4, booking.getStatus());
+        verify(eventPublisher).publishEvent(any(BookingCheckedOutEvent.class));
     }
 
     private Booking validBooking() {

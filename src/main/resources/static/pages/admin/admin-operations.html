@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>运营中心 - 酒店管理系统</title>
+    <link rel="stylesheet" href="/css/admin.css">
+    <link rel="stylesheet" href="/css/operations.css">
+</head>
+<body>
+<div class="admin-container">
+    <aside class="admin-sidebar">
+        <div class="sidebar-header"><h2>🏨 酒店管理后台</h2></div>
+        <nav class="sidebar-nav">
+            <a href="/pages/admin/admin-dashboard.html">首页</a>
+            <a href="/pages/admin/admin-room.html">客房管理</a>
+            <a href="/pages/admin/admin-booking.html">订单管理</a>
+            <a href="/pages/admin/admin-operations.html" class="active">运营中心</a>
+            <a href="/pages/admin/admin-user.html">用户管理</a>
+        </nav>
+    </aside>
+
+    <main class="admin-main">
+        <header class="admin-header">
+            <div>
+                <h1>运营自动化中心</h1>
+                <p class="page-subtitle">退房事件自动生成清洁任务，逾期与临近入住风险自动提醒</p>
+            </div>
+            <div class="header-actions">
+                <button class="btn btn-secondary" id="scanBtn">立即扫描风险</button>
+                <span id="adminName">管理员</span>
+                <button class="btn btn-secondary" id="logoutBtn">退出</button>
+            </div>
+        </header>
+
+        <section class="stats-grid operations-stats">
+            <div class="stat-card"><div class="stat-icon task">🧹</div><div><div class="stat-label">待清洁</div><div id="pendingTasks" class="stat-value">0</div></div></div>
+            <div class="stat-card"><div class="stat-icon working">🫧</div><div><div class="stat-label">清洁中</div><div id="inProgressTasks" class="stat-value">0</div></div></div>
+            <div class="stat-card"><div class="stat-icon overdue">⏱</div><div><div class="stat-label">已逾期</div><div id="overdueTasks" class="stat-value">0</div></div></div>
+            <div class="stat-card"><div class="stat-icon alert">🔔</div><div><div class="stat-label">待处理提醒</div><div id="openReminders" class="stat-value">0</div></div></div>
+        </section>
+
+        <section class="content-section operations-section">
+            <div class="section-heading">
+                <div><h2>自动运营提醒</h2><p>相同风险只生成一条提醒，清洁完成后自动关闭关联提醒。</p></div>
+                <span class="live-indicator"><i></i> 自动刷新</span>
+            </div>
+            <div id="reminderList" class="reminder-list"><div class="empty-state">加载中...</div></div>
+        </section>
+
+        <section class="content-section operations-section">
+            <div class="section-heading">
+                <div><h2>退房清洁任务</h2><p>清洁完成前房间保持“待清洁”状态，不进入可售库存。</p></div>
+            </div>
+            <table class="data-table operations-table">
+                <thead><tr><th>任务号</th><th>房间</th><th>优先级</th><th>状态</th><th>负责人</th><th>完成时限</th><th>操作</th></tr></thead>
+                <tbody id="taskList"><tr><td colspan="7" class="empty-state">加载中...</td></tr></tbody>
+            </table>
+        </section>
+    </main>
+</div>
+
+<script src="/js/dialog.js"></script>
+<script src="/js/admin-operations.js"></script>
+</body>
+</html>

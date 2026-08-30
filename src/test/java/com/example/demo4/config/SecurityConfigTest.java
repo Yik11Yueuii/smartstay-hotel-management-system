@@ -36,6 +36,14 @@ class SecurityConfigTest {
     }
 
     @Test
+    void operationsApiRejectsOrdinaryUserToken() throws Exception {
+        mockMvc.perform(get("/api/operations/overview")
+                        .header("Authorization", "Bearer " + tokenFor(2L, 0)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.errorCode").value("FORBIDDEN"));
+    }
+
+    @Test
     void adminRolePassesAuthorizationLayer() throws Exception {
         mockMvc.perform(get("/api/dashboard/not-found")
                         .header("Authorization", "Bearer " + tokenFor(1L, 1)))

@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.demo4.entity.Booking;
 import com.example.demo4.common.BookingStatus;
+import com.example.demo4.common.RoomStatus;
 import com.example.demo4.entity.Room;
 import com.example.demo4.mapper.BookingMapper;
 import com.example.demo4.mapper.RoomMapper;
@@ -15,6 +16,8 @@ import com.example.demo4.exception.BusinessException;
 import com.example.demo4.exception.ErrorCode;
 import com.example.demo4.pricing.PricingQuote;
 import com.example.demo4.pricing.PricingService;
+import com.example.demo4.operations.event.BookingCheckedOutEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,11 +31,14 @@ public class BookingServiceImpl extends ServiceImpl<BookingMapper, Booking> impl
     private final RoomService roomService;
     private final RoomMapper roomMapper;
     private final PricingService pricingService;
+    private final ApplicationEventPublisher eventPublisher;
 
-    public BookingServiceImpl(RoomService roomService, RoomMapper roomMapper, PricingService pricingService) {
+    public BookingServiceImpl(RoomService roomService, RoomMapper roomMapper, PricingService pricingService,
+                              ApplicationEventPublisher eventPublisher) {
         this.roomService = roomService;
         this.roomMapper = roomMapper;
         this.pricingService = pricingService;
+        this.eventPublisher = eventPublisher;
     }
 
     @Override
@@ -51,7 +57,10 @@ public class BookingServiceImpl extends ServiceImpl<BookingMapper, Booking> impl
         if (room == null) {
             throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "客房不存在");
         }
-        if (room.getStatus() == null || room.getStatus() == 3 || room.getStatus() == 4) {
+        if (room.getStatus() == null
+                || room.getStatus() == RoomStatus.OCCUPIED.getCode()
+                || room.getStatus() == RoomStatus.MAINTENANCE.getCode()
+                || room.getStatus() == RoomStatus.CLEANING.getCode()) {
             throw new BusinessException(ErrorCode.STATE_CONFLICT, "客房当前不可预订");
         }
 
@@ -120,13 +129,13 @@ public class BookingServiceImpl extends ServiceImpl<BookingMapper, Booking> impl
         }
         BookingStatus.fromCode(booking.getStatus()).requireTransitionTo(BookingStatus.CONFIRMED);
         Room room = requireRoom(booking.getRoomId());
-        if (room.getStatus() == 4) {
+        if (room.getStatus() == RoomStatus.MAINTENANCE.getCode()) {
             throw new BusinessException(ErrorCode.STATE_CONFLICT, "维护中的客房不能确认预订");
         }
         booking.setStatus(BookingStatus.CONFIRMED.getCode());
         this.updateById(booking);
-        if (room.getStatus() == 1) {
-            room.setStatus(2);
+        if (room.getStatus() == RoomStatus.AVAILABLE.getCode()) {
+            room.setStatus(RoomStatus.RESERVED.getCode());
             roomService.updateById(room);
         }
     }
@@ -163,10 +172,13 @@ public class BookingServiceImpl extends ServiceImpl<BookingMapper, Booking> impl
             throw new BusinessException(ErrorCode.STATE_CONFLICT, "当前日期不在订单入住期间");
         }
         Room room = requireRoom(booking.getRoomId());
-        if (room.getStatus() == 4) {
+        if (room.getStatus() == RoomStatus.MAINTENANCE.getCode()) {
             throw new BusinessException(ErrorCode.STATE_CONFLICT, "维护中的客房不能办理入住");
         }
-        if (room.getStatus() == 3) {
+        if (room.getStatus() == RoomStatus.CLEANING.getCode()) {
+            throw new BusinessException(ErrorCode.STATE_CONFLICT, "客房清洁完成前不能办理入住");
+        }
+        if (room.getStatus() == RoomStatus.OCCUPIED.getCode()) {
             throw new BusinessException(ErrorCode.STATE_CONFLICT, "客房当前已有住客");
         }
 
@@ -177,7 +189,7 @@ public class BookingServiceImpl extends ServiceImpl<BookingMapper, Booking> impl
         booking.setStatus(BookingStatus.CHECKED_IN.getCode());
         this.updateById(booking);
 
-        room.setStatus(3);
+        room.setStatus(RoomStatus.OCCUPIED.getCode());
         roomService.updateById(room);
     }
 
@@ -200,10 +212,12 @@ public class BookingServiceImpl extends ServiceImpl<BookingMapper, Booking> impl
         booking.setDepositReturn(depositReturn);
         booking.setAdditionalCharges(additionalCharges);
         booking.setRemark(remark == null ? "" : remark);
-        booking.setActualCheckOutTime(LocalDateTime.now());
+        LocalDateTime checkedOutTime = LocalDateTime.now();
+        booking.setActualCheckOutTime(checkedOutTime);
         booking.setStatus(BookingStatus.CHECKED_OUT.getCode());
         this.updateById(booking);
-        refreshRoomStatus(booking.getRoomId());
+        eventPublisher.publishEvent(new BookingCheckedOutEvent(
+                booking.getId(), booking.getRoomId(), booking.getRoomNumber(), checkedOutTime));
     }
 
     private void validateBookingRequest(Booking booking) {
@@ -241,14 +255,16 @@ public class BookingServiceImpl extends ServiceImpl<BookingMapper, Booking> impl
 
     private void refreshRoomStatus(Long roomId) {
         Room room = requireRoom(roomId);
-        if (room.getStatus() == 4) {
+        if (room.getStatus() == RoomStatus.MAINTENANCE.getCode()
+                || room.getStatus() == RoomStatus.CLEANING.getCode()) {
             return;
         }
         LambdaQueryWrapper<Booking> checkedIn = new LambdaQueryWrapper<>();
         checkedIn.eq(Booking::getRoomId, roomId).eq(Booking::getStatus, BookingStatus.CHECKED_IN.getCode());
         LambdaQueryWrapper<Booking> confirmed = new LambdaQueryWrapper<>();
         confirmed.eq(Booking::getRoomId, roomId).eq(Booking::getStatus, BookingStatus.CONFIRMED.getCode());
-        room.setStatus(this.count(checkedIn) > 0 ? 3 : this.count(confirmed) > 0 ? 2 : 1);
+        room.setStatus(this.count(checkedIn) > 0 ? RoomStatus.OCCUPIED.getCode()
+                : this.count(confirmed) > 0 ? RoomStatus.RESERVED.getCode() : RoomStatus.AVAILABLE.getCode());
         roomService.updateById(room);
     }
 }

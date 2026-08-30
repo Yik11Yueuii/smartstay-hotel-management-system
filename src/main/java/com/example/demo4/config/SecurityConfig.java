@@ -28,7 +28,8 @@ public class SecurityConfig {
                 .antMatchers(HttpMethod.GET, "/api/notice/show").permitAll()
                 .regexMatchers(HttpMethod.GET, "^/api/notice/[0-9]+$").permitAll()
                 .antMatchers("/api/user/me", "/api/user/me/**", "/api/user/password").authenticated()
-                .antMatchers("/api/dashboard/**", "/api/notice/list", "/api/notice/add", "/api/notice/update",
+                .antMatchers("/api/dashboard/**", "/api/operations/**",
+                        "/api/notice/list", "/api/notice/add", "/api/notice/update",
                         "/api/booking/confirm/**", "/api/booking/checkin", "/api/booking/checkout",
                         "/api/user/list", "/api/user/update", "/api/user/*", "/api/feedback/reply").hasRole("ADMIN")
                 .antMatchers(HttpMethod.POST, "/api/room/**", "/api/notice/**").hasRole("ADMIN")

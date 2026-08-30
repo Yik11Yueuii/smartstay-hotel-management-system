@@ -1,11 +1,13 @@
 -- 智慧酒店管理系统演示数据
--- 警告：执行后会清空 hotel_management 中现有的 5 张业务表。
+-- 警告：执行后会清空 hotel_management 中现有的 7 张业务表。
 -- 演示账号：admin / admin123，普通用户 user1-user4 / 123456。
 
 USE hotel_management;
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
+TRUNCATE TABLE operation_reminder;
+TRUNCATE TABLE housekeeping_task;
 TRUNCATE TABLE feedback;
 TRUNCATE TABLE booking;
 TRUNCATE TABLE notice;
@@ -43,6 +45,18 @@ INSERT INTO booking (id, order_no, user_id, room_id, room_name, room_number, che
 (5, 'DEMO-CANCELLED-001', 3, 5, '商务套房', '0601', CURDATE() + INTERVAL 15 DAY, CURDATE() + INTERVAL 16 DAY, 1, 899.00, 899.00, '李晓雨', '13800000003', NULL, NULL, 0.00, NULL, NULL, 0.00, 0.00, '用户主动取消', 2, NOW() - INTERVAL 5 DAY),
 (6, 'DEMO-CONFIRMED-002', 2, 6, '景观双床房', '0502', CURDATE() + INTERVAL 20 DAY, CURDATE() + INTERVAL 22 DAY, 2, 419.00, 838.00, '张晨', '13800000002', NULL, NULL, 0.00, NULL, NULL, 0.00, 0.00, '第二个已确认订单', 1, NOW() - INTERVAL 6 DAY),
 (7, 'DEMO-CHECKEDOUT-002', 4, 7, '舒适大床房', '0201', CURDATE() - INTERVAL 10 DAY, CURDATE() - INTERVAL 8 DAY, 2, 239.00, 478.00, '王嘉乐', '13800000004', '王嘉乐', '110101199001011234', 200.00, NOW() - INTERVAL 10 DAY, NOW() - INTERVAL 8 DAY, 200.00, 0.00, '历史已退房订单', 4, NOW() - INTERVAL 15 DAY);
+
+INSERT INTO housekeeping_task
+    (id, task_no, booking_id, room_id, room_number, task_type, status, priority, due_time, create_time) VALUES
+(1, 'DEMO-HK-ROOM-0401', 4, 4, '0401', 'CHECKOUT_CLEANING', 0, 2,
+ NOW() - INTERVAL 30 MINUTE, NOW() - INTERVAL 1 HOUR);
+
+UPDATE room SET status = 5 WHERE id = 4;
+
+INSERT INTO operation_reminder
+    (id, reminder_key, reminder_type, level, title, content, booking_id, room_id, task_id, status, trigger_time, create_time) VALUES
+(1, 'CLEANING_OVERDUE:1', 'CLEANING_OVERDUE', 2, '退房清洁已逾期',
+ '房间 0401 清洁任务已逾期 30 分钟', 4, 4, 1, 0, NOW() - INTERVAL 30 MINUTE, NOW());
 
 INSERT INTO notice (id, title, content, status, create_time) VALUES
 (1, '欢迎体验智慧酒店管理系统', '本系统数据均为本地演示数据，可用于预订、入住、退房和权限流程演示。', 1, NOW() - INTERVAL 10 DAY),

@@ -2,6 +2,7 @@ package com.example.demo4.pricing;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.example.demo4.entity.Room;
+import com.example.demo4.common.RoomStatus;
 import com.example.demo4.exception.BusinessException;
 import com.example.demo4.exception.ErrorCode;
 import com.example.demo4.mapper.BookingMapper;
@@ -50,7 +51,8 @@ public class PricingService {
         long nights = ChronoUnit.DAYS.between(checkInDate, checkOutDate);
         long advanceDays = ChronoUnit.DAYS.between(LocalDate.now(), checkInDate);
         BigDecimal basePrice = basePrice(room);
-        long sellableRooms = roomService.count(new LambdaQueryWrapper<Room>().ne(Room::getStatus, 4));
+        long sellableRooms = roomService.count(new LambdaQueryWrapper<Room>()
+                .notIn(Room::getStatus, RoomStatus.MAINTENANCE.getCode(), RoomStatus.CLEANING.getCode()));
         if (sellableRooms <= 0) throw new BusinessException(ErrorCode.STATE_CONFLICT, "当前没有可售客房");
 
         List<PricingNightQuote> nightlyPrices = new ArrayList<>();
