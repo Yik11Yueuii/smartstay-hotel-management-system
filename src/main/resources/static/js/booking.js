@@ -1,4 +1,11 @@
 let currentRoom = null;
+let bookingIdempotencyKey = null;
+
+function newIdempotencyKey() {
+    return window.crypto && crypto.randomUUID
+        ? crypto.randomUUID()
+        : Date.now().toString(36) + '-' + Math.random().toString(36).slice(2) + '-booking';
+}
 
 // 获取URL参数
 function getQueryParam(param) {
@@ -61,6 +68,7 @@ document.getElementById('checkOutDate').min = today;
 // 提交预订
 document.getElementById('bookingForm')?.addEventListener('submit', function(e) {
     e.preventDefault();
+    if (!bookingIdempotencyKey) bookingIdempotencyKey = newIdempotencyKey();
 
     const user = JSON.parse(localStorage.getItem('user') || 'null');
     if (!user) {
@@ -101,7 +109,9 @@ document.getElementById('bookingForm')?.addEventListener('submit', function(e) {
     fetch('/api/booking/create', {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + (localStorage.getItem('token') || ''),
+            'Idempotency-Key': bookingIdempotencyKey
         },
         body: JSON.stringify(bookingData)
     })
@@ -111,6 +121,7 @@ document.getElementById('bookingForm')?.addEventListener('submit', function(e) {
                 alert('预订成功!');
                 location.href = '/pages/user/user-center.html';
             } else {
+                bookingIdempotencyKey = null;
                 alert('预订失败: ' + data.message);
             }
         })

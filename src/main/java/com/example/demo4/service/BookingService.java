@@ -6,7 +6,7 @@ import com.example.demo4.entity.Booking;
 import java.math.BigDecimal;
 
 public interface BookingService extends IService<Booking> {
-    void createBooking(Booking booking, Long authenticatedUserId);
+    Booking createBooking(Booking booking, Long authenticatedUserId, String idempotencyKey);
     void confirmBooking(Long id);
     void cancelBooking(Long id, Long authenticatedUserId, Integer authenticatedRole);
     void checkIn(Long id, String guestName, String guestIdCard, BigDecimal deposit);

@@ -81,11 +81,11 @@ public class BookingController {
      * 创建订单
      */
     @PostMapping("/create")
-    public Result<String> create(
+    public Result<Booking> create(
             @RequestAttribute(JwtAuthenticationFilter.AUTH_USER_ID) Long authenticatedUserId,
+            @RequestHeader("Idempotency-Key") String idempotencyKey,
             @RequestBody Booking booking) {
-        bookingService.createBooking(booking, authenticatedUserId);
-        return Result.success("预订成功");
+        return Result.success(bookingService.createBooking(booking, authenticatedUserId, idempotencyKey));
     }
 
     /**

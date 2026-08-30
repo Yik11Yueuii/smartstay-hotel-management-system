@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.example.demo4.entity.Booking;
 import com.example.demo4.entity.Room;
 import com.example.demo4.service.RoomService;
+import com.example.demo4.mapper.RoomMapper;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -12,6 +13,7 @@ import java.time.LocalDate;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -22,8 +24,10 @@ class BookingServiceImplTest {
     @Test
     void createBookingCalculatesTrustedRoomPriceOnServer() {
         RoomService roomService = mock(RoomService.class);
-        when(roomService.getById(8L)).thenReturn(availableRoom());
-        BookingServiceImpl service = spy(new BookingServiceImpl(roomService));
+        RoomMapper roomMapper = mock(RoomMapper.class);
+        when(roomMapper.selectByIdForUpdate(8L)).thenReturn(availableRoom());
+        BookingServiceImpl service = spy(new BookingServiceImpl(roomService, roomMapper));
+        doReturn(null).when(service).getOne(any(Wrapper.class), eq(false));
         doReturn(0L).when(service).count(any(Wrapper.class));
         doReturn(true).when(service).save(any(Booking.class));
         Booking booking = validBooking();
@@ -31,7 +35,7 @@ class BookingServiceImplTest {
         booking.setTotalAmount(new BigDecimal("0.01"));
         booking.setUserId(999L);
 
-        service.createBooking(booking, 2L);
+        service.createBooking(booking, 2L, "test-key-0000000001");
 
         assertEquals(2L, booking.getUserId());
         assertEquals("豪华双人间", booking.getRoomName());
@@ -44,12 +48,14 @@ class BookingServiceImplTest {
     @Test
     void createBookingRejectsOverlappingReservation() {
         RoomService roomService = mock(RoomService.class);
-        when(roomService.getById(8L)).thenReturn(availableRoom());
-        BookingServiceImpl service = spy(new BookingServiceImpl(roomService));
+        RoomMapper roomMapper = mock(RoomMapper.class);
+        when(roomMapper.selectByIdForUpdate(8L)).thenReturn(availableRoom());
+        BookingServiceImpl service = spy(new BookingServiceImpl(roomService, roomMapper));
+        doReturn(null).when(service).getOne(any(Wrapper.class), eq(false));
         doReturn(1L).when(service).count(any(Wrapper.class));
 
         RuntimeException exception = assertThrows(RuntimeException.class,
-                () -> service.createBooking(validBooking(), 2L));
+                () -> service.createBooking(validBooking(), 2L, "test-key-0000000002"));
 
         assertEquals("所选日期内客房已被预订", exception.getMessage());
     }
@@ -65,7 +71,7 @@ class BookingServiceImplTest {
         booking.setStatus(1);
         booking.setCheckInDate(LocalDate.now());
         booking.setCheckOutDate(LocalDate.now().plusDays(1));
-        BookingServiceImpl service = spy(new BookingServiceImpl(roomService));
+        BookingServiceImpl service = spy(new BookingServiceImpl(roomService, mock(RoomMapper.class)));
         doReturn(booking).when(service).getById(10L);
         doReturn(true).when(service).updateById(any(Booking.class));
 
@@ -82,7 +88,7 @@ class BookingServiceImplTest {
         Booking booking = validBooking();
         booking.setStatus(3);
         booking.setDeposit(new BigDecimal("200.00"));
-        BookingServiceImpl service = spy(new BookingServiceImpl(roomService));
+        BookingServiceImpl service = spy(new BookingServiceImpl(roomService, mock(RoomMapper.class)));
         doReturn(booking).when(service).getById(10L);
 
         RuntimeException exception = assertThrows(RuntimeException.class,
@@ -95,7 +101,7 @@ class BookingServiceImplTest {
     void confirmRejectsBookingThatIsNotPending() {
         Booking booking = validBooking();
         booking.setStatus(2);
-        BookingServiceImpl service = spy(new BookingServiceImpl(mock(RoomService.class)));
+        BookingServiceImpl service = spy(new BookingServiceImpl(mock(RoomService.class), mock(RoomMapper.class)));
         doReturn(booking).when(service).getById(10L);
 
         RuntimeException exception = assertThrows(RuntimeException.class,

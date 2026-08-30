@@ -8,6 +8,7 @@ import com.example.demo4.entity.Booking;
 import com.example.demo4.common.BookingStatus;
 import com.example.demo4.entity.Room;
 import com.example.demo4.mapper.BookingMapper;
+import com.example.demo4.mapper.RoomMapper;
 import com.example.demo4.service.BookingService;
 import com.example.demo4.service.RoomService;
 import com.example.demo4.exception.BusinessException;
@@ -24,23 +25,35 @@ import java.time.temporal.ChronoUnit;
 public class BookingServiceImpl extends ServiceImpl<BookingMapper, Booking> implements BookingService {
 
     private final RoomService roomService;
+    private final RoomMapper roomMapper;
 
-    public BookingServiceImpl(RoomService roomService) {
+    public BookingServiceImpl(RoomService roomService, RoomMapper roomMapper) {
         this.roomService = roomService;
+        this.roomMapper = roomMapper;
     }
 
     @Override
     @Transactional
-    public void createBooking(Booking booking, Long authenticatedUserId) {
+    public Booking createBooking(Booking booking, Long authenticatedUserId, String idempotencyKey) {
+        validateIdempotencyKey(idempotencyKey);
+        if (booking == null) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, "预订信息不能为空");
+        }
+
+        Booking existing = findIdempotentBooking(authenticatedUserId, idempotencyKey);
+        if (existing != null) return requireSameRequest(existing, booking);
         validateBookingRequest(booking);
 
-        Room room = roomService.getById(booking.getRoomId());
+        Room room = roomMapper.selectByIdForUpdate(booking.getRoomId());
         if (room == null) {
             throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "客房不存在");
         }
         if (room.getStatus() == null || room.getStatus() == 3 || room.getStatus() == 4) {
             throw new BusinessException(ErrorCode.STATE_CONFLICT, "客房当前不可预订");
         }
+
+        existing = findIdempotentBooking(authenticatedUserId, idempotencyKey);
+        if (existing != null) return requireSameRequest(existing, booking);
 
         LambdaQueryWrapper<Booking> conflict = new LambdaQueryWrapper<>();
         conflict.eq(Booking::getRoomId, room.getId())
@@ -59,6 +72,7 @@ public class BookingServiceImpl extends ServiceImpl<BookingMapper, Booking> impl
         booking.setOrderNo("ORD" + System.currentTimeMillis()
                 + IdUtil.fastSimpleUUID().substring(0, 6).toUpperCase());
         booking.setUserId(authenticatedUserId);
+        booking.setIdempotencyKey(idempotencyKey);
         booking.setRoomName(room.getRoomName());
         booking.setRoomNumber(room.getRoomNumber());
         booking.setDays(Math.toIntExact(days));
@@ -68,6 +82,29 @@ public class BookingServiceImpl extends ServiceImpl<BookingMapper, Booking> impl
         if (!this.save(booking)) {
             throw new BusinessException(ErrorCode.INTERNAL_ERROR, "预订创建失败");
         }
+        return booking;
+    }
+
+    private void validateIdempotencyKey(String key) {
+        if (StrUtil.isBlank(key) || key.length() < 16 || key.length() > 64
+                || !key.matches("^[A-Za-z0-9_-]+$")) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, "Idempotency-Key 必须为16-64位字母、数字、下划线或短横线");
+        }
+    }
+
+    private Booking findIdempotentBooking(Long userId, String key) {
+        return this.getOne(new LambdaQueryWrapper<Booking>()
+                .eq(Booking::getUserId, userId)
+                .eq(Booking::getIdempotencyKey, key), false);
+    }
+
+    private Booking requireSameRequest(Booking existing, Booking requested) {
+        if (!existing.getRoomId().equals(requested.getRoomId())
+                || !existing.getCheckInDate().equals(requested.getCheckInDate())
+                || !existing.getCheckOutDate().equals(requested.getCheckOutDate())) {
+            throw new BusinessException(ErrorCode.STATE_CONFLICT, "同一 Idempotency-Key 不能用于不同预订请求");
+        }
+        return existing;
     }
 
     @Override
