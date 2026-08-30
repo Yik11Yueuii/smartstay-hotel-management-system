@@ -30,8 +30,12 @@ public class Booking {
     private LocalDate checkOutDate;
 
     private Integer days;
+    private BigDecimal basePrice;
     private BigDecimal price;
     private BigDecimal totalAmount;
+    private String pricingStrategyVersion;
+    @JsonIgnore
+    private String pricingSnapshot;
     private String contactName;
     private String contactPhone;
     private String guestName;

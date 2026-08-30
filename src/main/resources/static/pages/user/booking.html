@@ -67,8 +67,12 @@
 
                 <!-- 价格信息 -->
                 <div class="price-summary">
+                    <div class="smart-pricing-title">
+                        <span>✨ 智能报价</span>
+                        <span id="quoteStatus" class="quote-status">选择日期后实时计算</span>
+                    </div>
                     <div class="price-item">
-                        <span>单价:</span>
+                        <span>动态均价:</span>
                         <span>¥<span id="unitPrice">0</span>/晚</span>
                     </div>
                     <div class="price-item">
@@ -76,9 +80,20 @@
                         <span><span id="days">0</span>天</span>
                     </div>
                     <div class="price-item total">
-                        <span>总价:</span>
+                        <span>预计总价:</span>
                         <span class="total-price">¥<span id="totalPrice">0</span></span>
                     </div>
+                    <section id="pricingInsights" class="pricing-insights" hidden>
+                        <div class="strategy-meta">
+                            <span>本次报价依据</span>
+                            <span id="strategyVersion" class="strategy-version"></span>
+                        </div>
+                        <div id="pricingRuleSummary" class="pricing-rule-summary"></div>
+                        <details class="pricing-breakdown">
+                            <summary>查看逐日价格与经营依据</summary>
+                            <div id="nightlyPrices" class="nightly-prices"></div>
+                        </details>
+                    </section>
                 </div>
 
                 <button type="submit" class="btn btn-primary btn-block">确认预订</button>
@@ -90,7 +105,9 @@
 <script src="/js/dialog.js"></script>
 <script>
     let currentRoom = null;
+    let currentQuote = null;
     let bookingIdempotencyKey = null;
+    let quoteRequestSequence = 0;
 
     function newIdempotencyKey() {
         return window.crypto && crypto.randomUUID
@@ -124,6 +141,7 @@
                         '<strong>' + currentRoom.roomName + '</strong> (房间号: ' + currentRoom.roomNumber + ')<br>' +
                         '价格: ¥' + price + '/晚 ' + (currentRoom.isPromotion ? '<span class="badge badge-danger">促销</span>' : '');
                     document.getElementById('unitPrice').textContent = price;
+                    calculatePrice();
                 } else {
                     alert('加载客房信息失败: ' + data.message);
                 }
@@ -134,26 +152,96 @@
             });
     }
 
-    // 计算价格
-    function calculatePrice() {
+    function formatMoney(value) {
+        return Number(value || 0).toFixed(2);
+    }
+
+    function escapeHtml(value) {
+        return String(value).replace(/[&<>'"]/g, char => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+        }[char]));
+    }
+
+    function resetQuote(message) {
+        currentQuote = null;
+        document.getElementById('days').textContent = 0;
+        document.getElementById('totalPrice').textContent = '0.00';
+        document.getElementById('pricingInsights').hidden = true;
+        document.getElementById('quoteStatus').textContent = message || '选择日期后实时计算';
+        if (currentRoom) {
+            const basePrice = currentRoom.isPromotion ? currentRoom.promotionPrice : currentRoom.price;
+            document.getElementById('unitPrice').textContent = formatMoney(basePrice);
+        }
+    }
+
+    function renderQuote(quote) {
+        currentQuote = quote;
+        document.getElementById('unitPrice').textContent = formatMoney(quote.averageNightlyPrice);
+        document.getElementById('days').textContent = quote.nights;
+        document.getElementById('totalPrice').textContent = formatMoney(quote.totalAmount);
+        document.getElementById('quoteStatus').textContent = '已按实时需求计算';
+        document.getElementById('strategyVersion').textContent = quote.strategyVersion;
+        document.getElementById('pricingInsights').hidden = false;
+
+        const allRules = quote.nightlyPrices.flatMap(night => night.adjustments);
+        const uniqueRules = [...new Map(allRules.map(rule => [rule.ruleCode, rule])).values()];
+        document.getElementById('pricingRuleSummary').innerHTML = uniqueRules.length
+            ? uniqueRules.map(rule => {
+                const direction = Number(rule.rate) < 0 ? 'discount' : 'premium';
+                const sign = Number(rule.rate) > 0 ? '+' : '';
+                return '<span class="pricing-rule-chip ' + direction + '" title="'
+                    + escapeHtml(rule.reason) + '">' + escapeHtml(rule.ruleName) + ' '
+                    + sign + Math.round(Number(rule.rate) * 100) + '%</span>';
+            }).join('')
+            : '<span class="pricing-rule-chip neutral">当前按基础价执行</span>';
+
+        document.getElementById('nightlyPrices').innerHTML = quote.nightlyPrices.map(night => {
+            const reasons = night.adjustments.length
+                ? night.adjustments.map(rule => '<li>' + escapeHtml(rule.reason) + '（'
+                    + (Number(rule.amount) > 0 ? '+' : '') + '¥' + formatMoney(rule.amount) + '）</li>').join('')
+                : '<li>未触发调价规则</li>';
+            return '<article class="night-price-card">'
+                + '<div class="night-price-heading"><strong>' + escapeHtml(night.stayDate) + '</strong>'
+                + '<strong class="night-final-price">¥' + formatMoney(night.finalPrice) + '</strong></div>'
+                + '<div class="occupancy-hint">预测入住率 ' + Math.round(Number(night.occupancyRate) * 100)
+                + '% · 基础价 ¥' + formatMoney(night.basePrice) + '</div>'
+                + '<ul class="pricing-reasons">' + reasons + '</ul></article>';
+        }).join('');
+    }
+
+    // 服务端根据入住率、日期和连住天数生成可解释报价
+    async function calculatePrice() {
         const checkIn = document.getElementById('checkInDate').value;
         const checkOut = document.getElementById('checkOutDate').value;
+        bookingIdempotencyKey = null;
+        const requestSequence = ++quoteRequestSequence;
+        if (!checkIn || !checkOut || !currentRoom || checkOut <= checkIn) {
+            resetQuote(checkIn && checkOut ? '退房日期需晚于入住日期' : '选择日期后实时计算');
+            return;
+        }
 
-        if (checkIn && checkOut && currentRoom) {
-            const date1 = new Date(checkIn);
-            const date2 = new Date(checkOut);
-            const days = Math.ceil((date2 - date1) / (1000 * 60 * 60 * 24));
-
-            if (days > 0) {
-                const price = currentRoom.isPromotion ? currentRoom.promotionPrice : currentRoom.price;
-                const total = days * price;
-
-                document.getElementById('days').textContent = days;
-                document.getElementById('totalPrice').textContent = total;
-            } else {
-                document.getElementById('days').textContent = 0;
-                document.getElementById('totalPrice').textContent = 0;
+        resetQuote('正在分析入住率与价格规则...');
+        try {
+            const response = await fetch('/api/pricing/quote', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + (localStorage.getItem('token') || '')
+                },
+                body: JSON.stringify({roomId: currentRoom.id, checkInDate: checkIn, checkOutDate: checkOut})
+            });
+            const data = await response.json();
+            if (requestSequence !== quoteRequestSequence) return;
+            if (data.code === 401) {
+                resetQuote('请先登录后获取智能报价');
+                return;
             }
+            if (data.code !== 200) throw new Error(data.message || '智能报价失败');
+            renderQuote(data.data);
+        } catch (error) {
+            if (requestSequence !== quoteRequestSequence) return;
+            console.error('智能报价失败:', error);
+            resetQuote(error.message || '智能报价暂不可用');
         }
     }
 
@@ -186,8 +274,8 @@
         const days = parseInt(document.getElementById('days').textContent);
         const total = parseFloat(document.getElementById('totalPrice').textContent);
 
-        if (days <= 0) {
-            alert('请选择有效的入住和退房日期');
+        if (!currentQuote || currentQuote.checkInDate !== checkIn || currentQuote.checkOutDate !== checkOut || days <= 0) {
+            alert('请先获取有效的智能报价');
             return;
         }
 
@@ -199,7 +287,7 @@
             checkInDate: checkIn,
             checkOutDate: checkOut,
             days: days,
-            price: currentRoom.isPromotion ? currentRoom.promotionPrice : currentRoom.price,
+            price: currentQuote.averageNightlyPrice,
             totalAmount: total,
             contactName: contactName,
             contactPhone: contactPhone,

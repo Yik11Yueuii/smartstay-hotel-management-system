@@ -5,10 +5,13 @@ import com.example.demo4.entity.Booking;
 import com.example.demo4.entity.Room;
 import com.example.demo4.service.RoomService;
 import com.example.demo4.mapper.RoomMapper;
+import com.example.demo4.pricing.PricingQuote;
+import com.example.demo4.pricing.PricingService;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Collections;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -26,7 +29,7 @@ class BookingServiceImplTest {
         RoomService roomService = mock(RoomService.class);
         RoomMapper roomMapper = mock(RoomMapper.class);
         when(roomMapper.selectByIdForUpdate(8L)).thenReturn(availableRoom());
-        BookingServiceImpl service = spy(new BookingServiceImpl(roomService, roomMapper));
+        BookingServiceImpl service = spy(new BookingServiceImpl(roomService, roomMapper, pricingService()));
         doReturn(null).when(service).getOne(any(Wrapper.class), eq(false));
         doReturn(0L).when(service).count(any(Wrapper.class));
         doReturn(true).when(service).save(any(Booking.class));
@@ -42,6 +45,9 @@ class BookingServiceImplTest {
         assertEquals(3, booking.getDays());
         assertEquals(new BigDecimal("388.00"), booking.getPrice());
         assertEquals(new BigDecimal("1164.00"), booking.getTotalAmount());
+        assertEquals(new BigDecimal("388.00"), booking.getBasePrice());
+        assertEquals("SMART_PRICING_V1", booking.getPricingStrategyVersion());
+        assertEquals("{\"strategyVersion\":\"SMART_PRICING_V1\"}", booking.getPricingSnapshot());
         assertEquals(0, booking.getStatus());
     }
 
@@ -50,7 +56,7 @@ class BookingServiceImplTest {
         RoomService roomService = mock(RoomService.class);
         RoomMapper roomMapper = mock(RoomMapper.class);
         when(roomMapper.selectByIdForUpdate(8L)).thenReturn(availableRoom());
-        BookingServiceImpl service = spy(new BookingServiceImpl(roomService, roomMapper));
+        BookingServiceImpl service = spy(new BookingServiceImpl(roomService, roomMapper, pricingService()));
         doReturn(null).when(service).getOne(any(Wrapper.class), eq(false));
         doReturn(1L).when(service).count(any(Wrapper.class));
 
@@ -71,7 +77,8 @@ class BookingServiceImplTest {
         booking.setStatus(1);
         booking.setCheckInDate(LocalDate.now());
         booking.setCheckOutDate(LocalDate.now().plusDays(1));
-        BookingServiceImpl service = spy(new BookingServiceImpl(roomService, mock(RoomMapper.class)));
+        BookingServiceImpl service = spy(new BookingServiceImpl(
+                roomService, mock(RoomMapper.class), mock(PricingService.class)));
         doReturn(booking).when(service).getById(10L);
         doReturn(true).when(service).updateById(any(Booking.class));
 
@@ -88,7 +95,8 @@ class BookingServiceImplTest {
         Booking booking = validBooking();
         booking.setStatus(3);
         booking.setDeposit(new BigDecimal("200.00"));
-        BookingServiceImpl service = spy(new BookingServiceImpl(roomService, mock(RoomMapper.class)));
+        BookingServiceImpl service = spy(new BookingServiceImpl(
+                roomService, mock(RoomMapper.class), mock(PricingService.class)));
         doReturn(booking).when(service).getById(10L);
 
         RuntimeException exception = assertThrows(RuntimeException.class,
@@ -101,7 +109,8 @@ class BookingServiceImplTest {
     void confirmRejectsBookingThatIsNotPending() {
         Booking booking = validBooking();
         booking.setStatus(2);
-        BookingServiceImpl service = spy(new BookingServiceImpl(mock(RoomService.class), mock(RoomMapper.class)));
+        BookingServiceImpl service = spy(new BookingServiceImpl(
+                mock(RoomService.class), mock(RoomMapper.class), mock(PricingService.class)));
         doReturn(booking).when(service).getById(10L);
 
         RuntimeException exception = assertThrows(RuntimeException.class,
@@ -129,5 +138,23 @@ class BookingServiceImplTest {
         room.setIsPromotion(0);
         room.setPrice(new BigDecimal("388.00"));
         return room;
+    }
+
+    private PricingService pricingService() {
+        PricingService pricingService = mock(PricingService.class);
+        PricingQuote quote = new PricingQuote(
+                "SMART_PRICING_V1",
+                8L,
+                LocalDate.now().plusDays(10),
+                LocalDate.now().plusDays(13),
+                3,
+                new BigDecimal("388.00"),
+                new BigDecimal("388.00"),
+                new BigDecimal("1164.00"),
+                Collections.emptyList());
+        when(pricingService.quote(any(Room.class), any(LocalDate.class), any(LocalDate.class))).thenReturn(quote);
+        when(pricingService.serialize(any(PricingQuote.class)))
+                .thenReturn("{\"strategyVersion\":\"SMART_PRICING_V1\"}");
+        return pricingService;
     }
 }

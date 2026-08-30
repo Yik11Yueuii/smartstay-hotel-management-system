@@ -13,23 +13,26 @@ import com.example.demo4.service.BookingService;
 import com.example.demo4.service.RoomService;
 import com.example.demo4.exception.BusinessException;
 import com.example.demo4.exception.ErrorCode;
+import com.example.demo4.pricing.PricingQuote;
+import com.example.demo4.pricing.PricingService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 
 @Service
 public class BookingServiceImpl extends ServiceImpl<BookingMapper, Booking> implements BookingService {
 
     private final RoomService roomService;
     private final RoomMapper roomMapper;
+    private final PricingService pricingService;
 
-    public BookingServiceImpl(RoomService roomService, RoomMapper roomMapper) {
+    public BookingServiceImpl(RoomService roomService, RoomMapper roomMapper, PricingService pricingService) {
         this.roomService = roomService;
         this.roomMapper = roomMapper;
+        this.pricingService = pricingService;
     }
 
     @Override
@@ -65,9 +68,7 @@ public class BookingServiceImpl extends ServiceImpl<BookingMapper, Booking> impl
             throw new BusinessException(ErrorCode.STATE_CONFLICT, "所选日期内客房已被预订");
         }
 
-        long days = ChronoUnit.DAYS.between(booking.getCheckInDate(), booking.getCheckOutDate());
-        BigDecimal unitPrice = room.getIsPromotion() != null && room.getIsPromotion() == 1
-                && room.getPromotionPrice() != null ? room.getPromotionPrice() : room.getPrice();
+        PricingQuote quote = pricingService.quote(room, booking.getCheckInDate(), booking.getCheckOutDate());
 
         booking.setOrderNo("ORD" + System.currentTimeMillis()
                 + IdUtil.fastSimpleUUID().substring(0, 6).toUpperCase());
@@ -75,9 +76,12 @@ public class BookingServiceImpl extends ServiceImpl<BookingMapper, Booking> impl
         booking.setIdempotencyKey(idempotencyKey);
         booking.setRoomName(room.getRoomName());
         booking.setRoomNumber(room.getRoomNumber());
-        booking.setDays(Math.toIntExact(days));
-        booking.setPrice(unitPrice);
-        booking.setTotalAmount(unitPrice.multiply(BigDecimal.valueOf(days)));
+        booking.setDays(Math.toIntExact(quote.getNights()));
+        booking.setBasePrice(quote.getBaseNightlyPrice());
+        booking.setPrice(quote.getAverageNightlyPrice());
+        booking.setTotalAmount(quote.getTotalAmount());
+        booking.setPricingStrategyVersion(quote.getStrategyVersion());
+        booking.setPricingSnapshot(pricingService.serialize(quote));
         booking.setStatus(BookingStatus.PENDING.getCode());
         if (!this.save(booking)) {
             throw new BusinessException(ErrorCode.INTERNAL_ERROR, "预订创建失败");
