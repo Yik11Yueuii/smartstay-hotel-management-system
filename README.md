@@ -8,8 +8,9 @@
 
 1. 安装 JDK 21、Maven 3.9+ 和 MySQL 8。
 2. 按顺序执行 `database/migrations/V1__baseline_schema.sql`、V2、V3、V4、V5。
-3. 执行 `database/demo-data.sql` 填充演示数据。该脚本会清空并重建 8 张业务表的数据，不要用于需要保留数据的数据库。
-4. 如本地数据库账号不是 `root/root`，设置 `DB_URL`、`DB_USERNAME`、`DB_PASSWORD` 环境变量。
+3. 执行 `database/demo-data.sql` 填充当前流程演示数据。该脚本会清空并重建 8 张业务表的数据，不要用于需要保留数据的数据库。
+4. 执行 `database/2025-history-data.sql` 补充 2025 全年经营样本；该脚本非破坏、可重复执行，数据说明见 `docs/DEMO_DATA_2025.md`。
+5. 如本地数据库账号不是 `root/root`，设置 `DB_URL`、`DB_USERNAME`、`DB_PASSWORD` 环境变量。
 5. 构建并启动：
 
 ```powershell
