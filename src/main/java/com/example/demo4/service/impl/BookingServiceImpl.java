@@ -5,12 +5,14 @@ import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.demo4.entity.Booking;
+import com.example.demo4.common.BusinessMetricType;
 import com.example.demo4.common.BookingStatus;
 import com.example.demo4.common.RoomStatus;
 import com.example.demo4.entity.Room;
 import com.example.demo4.mapper.BookingMapper;
 import com.example.demo4.mapper.RoomMapper;
 import com.example.demo4.service.BookingService;
+import com.example.demo4.service.BusinessMetricService;
 import com.example.demo4.service.RoomService;
 import com.example.demo4.exception.BusinessException;
 import com.example.demo4.exception.ErrorCode;
@@ -18,6 +20,8 @@ import com.example.demo4.pricing.PricingQuote;
 import com.example.demo4.pricing.PricingService;
 import com.example.demo4.operations.event.BookingCheckedOutEvent;
 import org.springframework.context.ApplicationEventPublisher;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,18 +31,22 @@ import java.time.LocalDateTime;
 
 @Service
 public class BookingServiceImpl extends ServiceImpl<BookingMapper, Booking> implements BookingService {
+    private static final Logger log = LoggerFactory.getLogger(BookingServiceImpl.class);
 
     private final RoomService roomService;
     private final RoomMapper roomMapper;
     private final PricingService pricingService;
     private final ApplicationEventPublisher eventPublisher;
+    private final BusinessMetricService businessMetricService;
 
     public BookingServiceImpl(RoomService roomService, RoomMapper roomMapper, PricingService pricingService,
-                              ApplicationEventPublisher eventPublisher) {
+                              ApplicationEventPublisher eventPublisher,
+                              BusinessMetricService businessMetricService) {
         this.roomService = roomService;
         this.roomMapper = roomMapper;
         this.pricingService = pricingService;
         this.eventPublisher = eventPublisher;
+        this.businessMetricService = businessMetricService;
     }
 
     @Override
@@ -50,7 +58,7 @@ public class BookingServiceImpl extends ServiceImpl<BookingMapper, Booking> impl
         }
 
         Booking existing = findIdempotentBooking(authenticatedUserId, idempotencyKey);
-        if (existing != null) return requireSameRequest(existing, booking);
+        if (existing != null) return replayExisting(existing, booking, authenticatedUserId);
         validateBookingRequest(booking);
 
         Room room = roomMapper.selectByIdForUpdate(booking.getRoomId());
@@ -61,11 +69,13 @@ public class BookingServiceImpl extends ServiceImpl<BookingMapper, Booking> impl
                 || room.getStatus() == RoomStatus.OCCUPIED.getCode()
                 || room.getStatus() == RoomStatus.MAINTENANCE.getCode()
                 || room.getStatus() == RoomStatus.CLEANING.getCode()) {
+            recordMetric(BusinessMetricType.INVENTORY_CONFLICT, room.getId(), authenticatedUserId, null,
+                    "不可售房态请求已拦截");
             throw new BusinessException(ErrorCode.STATE_CONFLICT, "客房当前不可预订");
         }
 
         existing = findIdempotentBooking(authenticatedUserId, idempotencyKey);
-        if (existing != null) return requireSameRequest(existing, booking);
+        if (existing != null) return replayExisting(existing, booking, authenticatedUserId);
 
         LambdaQueryWrapper<Booking> conflict = new LambdaQueryWrapper<>();
         conflict.eq(Booking::getRoomId, room.getId())
@@ -74,6 +84,8 @@ public class BookingServiceImpl extends ServiceImpl<BookingMapper, Booking> impl
                 .lt(Booking::getCheckInDate, booking.getCheckOutDate())
                 .gt(Booking::getCheckOutDate, booking.getCheckInDate());
         if (this.count(conflict) > 0) {
+            recordMetric(BusinessMetricType.INVENTORY_CONFLICT, room.getId(), authenticatedUserId, null,
+                    "同房同日期库存冲突已拦截");
             throw new BusinessException(ErrorCode.STATE_CONFLICT, "所选日期内客房已被预订");
         }
 
@@ -118,6 +130,27 @@ public class BookingServiceImpl extends ServiceImpl<BookingMapper, Booking> impl
             throw new BusinessException(ErrorCode.STATE_CONFLICT, "同一 Idempotency-Key 不能用于不同预订请求");
         }
         return existing;
+    }
+
+    private Booking replayExisting(Booking existing, Booking requested, Long userId) {
+        try {
+            Booking replay = requireSameRequest(existing, requested);
+            recordMetric(BusinessMetricType.IDEMPOTENT_REPLAY, existing.getRoomId(), userId, existing.getId(),
+                    "网络重试返回原订单");
+            return replay;
+        } catch (BusinessException exception) {
+            recordMetric(BusinessMetricType.IDEMPOTENCY_KEY_CONFLICT,
+                    existing.getRoomId(), userId, existing.getId(), "同一幂等键用于不同预订请求");
+            throw exception;
+        }
+    }
+
+    private void recordMetric(String eventType, Long roomId, Long userId, Long bookingId, String detail) {
+        try {
+            businessMetricService.record(eventType, roomId, userId, bookingId, detail);
+        } catch (RuntimeException exception) {
+            log.warn("业务指标记录失败，不影响主预订流程: type={}", eventType, exception);
+        }
     }
 
     @Override

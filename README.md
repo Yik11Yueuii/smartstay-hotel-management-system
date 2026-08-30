@@ -7,8 +7,8 @@
 ## 从零启动
 
 1. 安装 JDK 21、Maven 3.9+ 和 MySQL 8。
-2. 按顺序执行 `database/migrations/V1__baseline_schema.sql`、V2、V3、V4。
-3. 执行 `database/demo-data.sql` 填充演示数据。该脚本会清空并重建 7 张业务表的数据，不要用于需要保留数据的数据库。
+2. 按顺序执行 `database/migrations/V1__baseline_schema.sql`、V2、V3、V4、V5。
+3. 执行 `database/demo-data.sql` 填充演示数据。该脚本会清空并重建 8 张业务表的数据，不要用于需要保留数据的数据库。
 4. 如本地数据库账号不是 `root/root`，设置 `DB_URL`、`DB_USERNAME`、`DB_PASSWORD` 环境变量。
 5. 构建并启动：
 
@@ -34,10 +34,11 @@ $env:Path = "$env:JAVA_HOME\bin;" + $env:Path
 .\mvnw.cmd clean package
 ```
 
-当前 JDK 21 全量构建包含 40 项自动化测试。功能设计、迁移和真实回归证据见：
+当前 JDK 21 全量构建包含 43 项自动化测试。功能设计、迁移和真实回归证据见：
 
 - `docs/BOOKING_CONCURRENCY.md`
 - `docs/SMART_PRICING.md`
 - `docs/OPERATIONS_AUTOMATION.md`
+- `docs/BUSINESS_MONITORING_DASHBOARD.md`
 - `docs/PERFORMANCE_TEST.md`
 - `docs/RESUME_ACHIEVEMENTS.md`

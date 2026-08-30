@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>经营决策大屏 - 酒店管理系统</title>
+    <link rel="stylesheet" href="/css/admin.css">
+    <link rel="stylesheet" href="/css/dashboard-monitoring.css">
+</head>
+<body>
+<div class="admin-container">
+    <aside class="admin-sidebar">
+        <div class="sidebar-header"><h2>🏨 酒店管理后台</h2></div>
+        <nav class="sidebar-nav">
+            <a href="/pages/admin/admin-dashboard.html">首页</a>
+            <a href="/pages/admin/admin-monitoring.html" class="active">经营大屏</a>
+            <a href="/pages/admin/admin-room.html">客房管理</a>
+            <a href="/pages/admin/admin-booking.html">订单管理</a>
+            <a href="/pages/admin/admin-operations.html">运营中心</a>
+            <a href="/pages/admin/admin-user.html">用户管理</a>
+        </nav>
+    </aside>
+
+    <main class="admin-main monitoring-main">
+        <header class="admin-header monitoring-header">
+            <div>
+                <div class="eyebrow">DECISION & RELIABILITY</div>
+                <h1>经营决策与监控大屏</h1>
+                <p>每项指标都对应调价、促销、库存保护或性能治理动作</p>
+            </div>
+            <div class="header-actions">
+                <span id="generatedAt">尚未更新</span>
+                <button class="btn btn-secondary" id="refreshBtn">刷新数据</button>
+                <span id="adminName">管理员</span>
+                <button class="btn btn-secondary" id="logoutBtn">退出</button>
+            </div>
+        </header>
+
+        <section id="decisionList" class="decision-list" aria-label="待处理经营建议"></section>
+
+        <section class="decision-kpis">
+            <article class="decision-kpi">
+                <span class="kpi-label">今日预测入住率</span>
+                <strong id="todayOccupancy">--</strong>
+                <small id="todayOccupancyHint">用于判断当天库存压力</small>
+            </article>
+            <article class="decision-kpi">
+                <span class="kpi-label">智能定价净影响</span>
+                <strong id="pricingImpact">--</strong>
+                <small id="pricingImpactHint">相对基础价的预订金额变化</small>
+            </article>
+            <article class="decision-kpi">
+                <span class="kpi-label">7天保护请求</span>
+                <strong id="protectedRequests">--</strong>
+                <small id="protectedRequestsHint">冲突拦截与幂等重放</small>
+            </article>
+            <article class="decision-kpi">
+                <span class="kpi-label">接口 P95</span>
+                <strong id="apiP95">--</strong>
+                <small id="apiP95Hint">最近15分钟滚动窗口</small>
+            </article>
+        </section>
+
+        <section class="dashboard-grid">
+            <article class="monitor-card wide" id="occupancy-forecast">
+                <div class="card-heading">
+                    <div>
+                        <span class="section-tag">收益管理</span>
+                        <h2>未来 14 天入住率预测</h2>
+                        <p>发现高需求提价日与低需求促销窗口，不展示与决策无关的历史装饰曲线。</p>
+                    </div>
+                    <div class="heading-metric"><strong id="averageOccupancy">--</strong><span>14天平均</span></div>
+                </div>
+                <div id="occupancyChart" class="bar-chart occupancy-chart" aria-label="未来14天入住率柱状图"></div>
+                <div class="chart-legend">
+                    <span><i class="legend-low"></i>≤30% 促销机会</span>
+                    <span><i class="legend-normal"></i>正常</span>
+                    <span><i class="legend-high"></i>≥80% 提价评估</span>
+                </div>
+            </article>
+
+            <article class="monitor-card inventory-card">
+                <div class="card-heading compact">
+                    <div><span class="section-tag">库存就绪</span><h2>当前可运营房量</h2></div>
+                </div>
+                <div class="inventory-ring" id="inventoryRing"><strong>--</strong><span>可售 / 容量</span></div>
+                <dl class="metric-details">
+                    <div><dt>待清洁房</dt><dd id="cleaningRooms">--</dd></div>
+                    <div><dt>清洁逾期</dt><dd id="overdueTasks">--</dd></div>
+                    <div><dt>峰值日期</dt><dd id="peakOccupancy">--</dd></div>
+                </dl>
+                <a class="inline-action" href="/pages/admin/admin-operations.html">前往恢复不可售库存 →</a>
+            </article>
+
+            <article class="monitor-card" id="pricing-effect">
+                <div class="card-heading">
+                    <div>
+                        <span class="section-tag">定价效果</span>
+                        <h2>基础价与智能定价对比</h2>
+                        <p>只统计近30天非取消且保留策略版本的订单，避免把旧订单误算为智能定价成果。</p>
+                    </div>
+                    <div class="heading-metric"><strong id="pricingCoverage">--</strong><span>定价覆盖率</span></div>
+                </div>
+                <div class="comparison-chart">
+                    <div class="comparison-row">
+                        <span>基础价金额</span><div class="comparison-track"><i id="baselineBar"></i></div><strong id="baselineAmount">--</strong>
+                    </div>
+                    <div class="comparison-row actual">
+                        <span>智能预订金额</span><div class="comparison-track"><i id="bookedBar"></i></div><strong id="bookedAmount">--</strong>
+                    </div>
+                </div>
+                <div class="outcome-strip">
+                    <span>溢价订单 <strong id="increasedBookings">0</strong></span>
+                    <span>优惠订单 <strong id="discountedBookings">0</strong></span>
+                    <span>价格不变 <strong id="unchangedBookings">0</strong></span>
+                </div>
+            </article>
+
+            <article class="monitor-card" id="booking-protection">
+                <div class="card-heading">
+                    <div>
+                        <span class="section-tag">可靠性收益</span>
+                        <h2>预订保护事件趋势</h2>
+                        <p>红柱是库存/幂等键冲突，绿柱是安全返回原订单的网络重试。</p>
+                    </div>
+                    <div class="heading-metric"><strong id="inventoryConflicts">--</strong><span>库存冲突 / 7天</span></div>
+                </div>
+                <div id="protectionChart" class="bar-chart protection-chart" aria-label="近7天预订保护事件柱状图"></div>
+                <div class="chart-legend">
+                    <span><i class="legend-conflict"></i>已拦截冲突</span>
+                    <span><i class="legend-replay"></i>幂等重放</span>
+                </div>
+            </article>
+
+            <article class="monitor-card full" id="api-performance">
+                <div class="card-heading">
+                    <div>
+                        <span class="section-tag">技术监控</span>
+                        <h2>接口性能与 5xx 错误率</h2>
+                        <p id="apiWindowDescription">进程内滚动窗口，应用重启后重新采样；用于定位当前慢接口，不冒充生产 APM。</p>
+                    </div>
+                    <div id="apiHealth" class="health-badge no-data">待采样</div>
+                </div>
+                <div class="api-layout">
+                    <div>
+                        <div id="apiTrend" class="bar-chart api-chart" aria-label="滚动窗口接口P95柱状图"></div>
+                        <div class="chart-legend">
+                            <span><i class="legend-api"></i>5分钟 P95</span>
+                            <span id="apiThresholdLegend">阈值 -- ms</span>
+                        </div>
+                    </div>
+                    <div class="api-summary">
+                        <div><span>样本数</span><strong id="apiSamples">0</strong></div>
+                        <div><span>P50</span><strong id="apiP50">--</strong></div>
+                        <div><span>P99</span><strong id="apiP99">--</strong></div>
+                        <div><span>错误率</span><strong id="apiErrorRate">--</strong></div>
+                    </div>
+                </div>
+                <div class="endpoint-table-wrap">
+                    <table class="data-table">
+                        <thead><tr><th>接口</th><th>样本</th><th>P95</th><th>最大耗时</th><th>错误率</th><th>判断</th></tr></thead>
+                        <tbody id="endpointRows"><tr><td colspan="6" class="empty-cell">等待请求样本...</td></tr></tbody>
+                    </table>
+                </div>
+            </article>
+        </section>
+    </main>
+</div>
+
+<script src="/js/dialog.js"></script>
+<script src="/js/admin-monitoring.js"></script>
+</body>
+</html>

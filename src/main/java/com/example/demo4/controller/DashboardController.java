@@ -9,6 +9,7 @@ import com.example.demo4.entity.User;
 import com.example.demo4.service.BookingService;
 import com.example.demo4.service.RoomService;
 import com.example.demo4.service.UserService;
+import com.example.demo4.monitoring.DecisionDashboardService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -28,13 +29,16 @@ public class DashboardController {
     private final BookingService bookingService;
     private final RoomService roomService;
     private final UserService userService;
+    private final DecisionDashboardService decisionDashboardService;
 
     public DashboardController(BookingService bookingService,
                                RoomService roomService,
-                               UserService userService) {
+                               UserService userService,
+                               DecisionDashboardService decisionDashboardService) {
         this.bookingService = bookingService;
         this.roomService = roomService;
         this.userService = userService;
+        this.decisionDashboardService = decisionDashboardService;
     }
 
     @GetMapping("/summary")
@@ -48,6 +52,11 @@ public class DashboardController {
         result.put("todayRevenue", calculateTodayRevenue());
         result.put("recentBookings", recentBookings());
         return Result.success(result);
+    }
+
+    @GetMapping("/decision")
+    public Result<Map<String, Object>> decision() {
+        return Result.success(decisionDashboardService.snapshot());
     }
 
     private BigDecimal calculateTodayRevenue() {

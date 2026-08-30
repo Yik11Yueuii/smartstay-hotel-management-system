@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.example.demo4.entity.Booking;
 import com.example.demo4.entity.Room;
 import com.example.demo4.service.RoomService;
+import com.example.demo4.service.BusinessMetricService;
 import com.example.demo4.mapper.RoomMapper;
 import com.example.demo4.pricing.PricingQuote;
 import com.example.demo4.pricing.PricingService;
@@ -33,7 +34,8 @@ class BookingServiceImplTest {
         RoomMapper roomMapper = mock(RoomMapper.class);
         when(roomMapper.selectByIdForUpdate(8L)).thenReturn(availableRoom());
         BookingServiceImpl service = spy(new BookingServiceImpl(
-                roomService, roomMapper, pricingService(), mock(ApplicationEventPublisher.class)));
+                roomService, roomMapper, pricingService(), mock(ApplicationEventPublisher.class),
+                mock(BusinessMetricService.class)));
         doReturn(null).when(service).getOne(any(Wrapper.class), eq(false));
         doReturn(0L).when(service).count(any(Wrapper.class));
         doReturn(true).when(service).save(any(Booking.class));
@@ -61,7 +63,8 @@ class BookingServiceImplTest {
         RoomMapper roomMapper = mock(RoomMapper.class);
         when(roomMapper.selectByIdForUpdate(8L)).thenReturn(availableRoom());
         BookingServiceImpl service = spy(new BookingServiceImpl(
-                roomService, roomMapper, pricingService(), mock(ApplicationEventPublisher.class)));
+                roomService, roomMapper, pricingService(), mock(ApplicationEventPublisher.class),
+                mock(BusinessMetricService.class)));
         doReturn(null).when(service).getOne(any(Wrapper.class), eq(false));
         doReturn(1L).when(service).count(any(Wrapper.class));
 
@@ -84,7 +87,7 @@ class BookingServiceImplTest {
         booking.setCheckOutDate(LocalDate.now().plusDays(1));
         BookingServiceImpl service = spy(new BookingServiceImpl(
                 roomService, mock(RoomMapper.class), mock(PricingService.class),
-                mock(ApplicationEventPublisher.class)));
+                mock(ApplicationEventPublisher.class), mock(BusinessMetricService.class)));
         doReturn(booking).when(service).getById(10L);
         doReturn(true).when(service).updateById(any(Booking.class));
 
@@ -103,7 +106,7 @@ class BookingServiceImplTest {
         booking.setDeposit(new BigDecimal("200.00"));
         BookingServiceImpl service = spy(new BookingServiceImpl(
                 roomService, mock(RoomMapper.class), mock(PricingService.class),
-                mock(ApplicationEventPublisher.class)));
+                mock(ApplicationEventPublisher.class), mock(BusinessMetricService.class)));
         doReturn(booking).when(service).getById(10L);
 
         RuntimeException exception = assertThrows(RuntimeException.class,
@@ -118,7 +121,7 @@ class BookingServiceImplTest {
         booking.setStatus(2);
         BookingServiceImpl service = spy(new BookingServiceImpl(
                 mock(RoomService.class), mock(RoomMapper.class), mock(PricingService.class),
-                mock(ApplicationEventPublisher.class)));
+                mock(ApplicationEventPublisher.class), mock(BusinessMetricService.class)));
         doReturn(booking).when(service).getById(10L);
 
         RuntimeException exception = assertThrows(RuntimeException.class,
@@ -136,7 +139,8 @@ class BookingServiceImplTest {
         booking.setDeposit(new BigDecimal("200.00"));
         ApplicationEventPublisher eventPublisher = mock(ApplicationEventPublisher.class);
         BookingServiceImpl service = spy(new BookingServiceImpl(
-                mock(RoomService.class), mock(RoomMapper.class), mock(PricingService.class), eventPublisher));
+                mock(RoomService.class), mock(RoomMapper.class), mock(PricingService.class), eventPublisher,
+                mock(BusinessMetricService.class)));
         doReturn(booking).when(service).getById(10L);
         doReturn(true).when(service).updateById(any(Booking.class));
 
