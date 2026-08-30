@@ -11,9 +11,11 @@
         <version>2.7.18</version>
     </parent>
 
-    <groupId>com.example</groupId>
-    <artifactId>demo4</artifactId>
+    <groupId>com.smartstay</groupId>
+    <artifactId>smartstay-hotel-management-system</artifactId>
     <version>1.0.0</version>
+    <name>SmartStay Hotel Management System</name>
+    <description>Decision-oriented smart hotel operations and booking platform</description>
 
     <properties>
         <java.version>21</java.version>

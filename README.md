@@ -1,4 +1,4 @@
-# 智慧酒店管理系统
+# SmartStay 智慧酒店管理系统
 
 基于 Spring Boot 2.7、Spring Security、MyBatis-Plus、MySQL 8 和原生 HTML/CSS/JavaScript 的酒店业务系统，使用 JDK 21 构建。
 
@@ -11,13 +11,13 @@
 3. 执行 `database/demo-data.sql` 填充当前流程演示数据。该脚本会清空并重建 8 张业务表的数据，不要用于需要保留数据的数据库。
 4. 执行 `database/2025-history-data.sql` 补充 2025 全年经营样本；该脚本非破坏、可重复执行，数据说明见 `docs/DEMO_DATA_2025.md`。
 5. 如本地数据库账号不是 `root/root`，设置 `DB_URL`、`DB_USERNAME`、`DB_PASSWORD` 环境变量。
-5. 构建并启动：
+6. 构建并启动：
 
 ```powershell
 $env:JAVA_HOME = "E:\jdk\jdk21"
 $env:Path = "$env:JAVA_HOME\bin;" + $env:Path
 .\mvnw.cmd clean package
-& "$env:JAVA_HOME\bin\java.exe" -jar target\demo4-1.0.0.jar
+& "$env:JAVA_HOME\bin\java.exe" -jar target\smartstay-hotel-management-system-1.0.0.jar
 ```
 
 访问入口：
